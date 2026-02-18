@@ -1,12 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>$Title$</title>
-</head>
-<body>
+{% extends 'base.html' %}
 
-<h1>hello</h1>
-$END$
-</body>
-</html>
+{% block title %}LearnSphere - Home{% endblock %}
+
+{% block content %}
+<section class="grid grid-2">
+    <div class="card">
+        <h1 class="section-title">Upskill with expert-led online courses</h1>
+        <p class="section-subtitle">Discover interactive learning paths in development, data science, design, and business. Learn at your own pace with projects and certificates.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="button">Start Learning</button>
+            <button class="button" style="background:#e0e7ff; color:#3730a3;">Explore Catalog</button>
+        </div>
+    </div>
+
+    <div class="card grid" style="align-content:center;">
+        <div><strong style="font-size:1.5rem; color:#3730a3;">12,000+</strong><p style="color:#6b7280;">Active learners</p></div>
+        <div><strong style="font-size:1.5rem; color:#3730a3;">320+</strong><p style="color:#6b7280;">Courses available</p></div>
+        <div><strong style="font-size:1.5rem; color:#3730a3;">96%</strong><p style="color:#6b7280;">Completion satisfaction</p></div>
+    </div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+    <h2 class="section-title" style="font-size:1.3rem;">Featured Learning Paths</h2>
+    <div class="grid grid-3">
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+            <span class="pill success">Beginner</span>
+            <h3 style="margin:10px 0 6px;">Frontend Engineer Path</h3>
+            <p style="color:#6b7280;">HTML, CSS, JavaScript, React and portfolio projects.</p>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+            <span class="pill warning">Intermediate</span>
+            <h3 style="margin:10px 0 6px;">Data Analyst Path</h3>
+            <p style="color:#6b7280;">Python, SQL, visualization, and dashboard storytelling.</p>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+            <span class="pill danger">Advanced</span>
+            <h3 style="margin:10px 0 6px;">Product Leadership Path</h3>
+            <p style="color:#6b7280;">Roadmapping, product metrics, and team strategy.</p>
+        </article>
+    </div>
+</section>
+{% endblock %}
