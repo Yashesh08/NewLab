@@ -4,94 +4,130 @@
 
 {% block extra_head %}
 <style>
-    .search-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-    .search-row input { flex:1; min-width:220px; padding:10px 12px; border:1px solid #d1d5db; border-radius:9px; }
-    .tag { background:#f3f4f6; border:1px solid transparent; padding:8px 10px; border-radius:99px; cursor:pointer; }
-    .tag.active { background:#e0e7ff; border-color:#a5b4fc; color:#3730a3; }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .controls input, .controls select {
+        flex: 1;
+        min-width: 220px;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 9px;
+    }
+
     .list { display:grid; gap:10px; }
-    .item { border:1px solid #e5e7eb; border-radius:12px; padding:14px; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; }
+    .item {
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:14px;
+        display:grid;
+        grid-template-columns:auto 1fr auto;
+        gap:12px;
+        align-items:center;
+    }
     .muted { color:#6b7280; }
-    @media (max-width:700px) { .item { grid-template-columns:1fr; } }
+
+    .pricing-card {
+        border: 1px solid #dbeafe;
+        background: #f8fbff;
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .tier {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    @media (max-width:900px) {
+        .pricing-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width:700px) {
+        .item { grid-template-columns:1fr; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="card">
     <h1 class="section-title">Browse Courses</h1>
-    <p class="section-subtitle">Search and filter by category to find the right program.</p>
+    <p class="section-subtitle">Search and filter by category, then open a course page from Enroll.</p>
 
-    <div class="search-row">
+    <div class="controls">
         <input id="searchInput" type="text" placeholder="Search courses...">
-        <div id="tags" style="display:flex; gap:8px; flex-wrap:wrap;">
-            <span class="tag active" data-category="All">All</span>
-            <span class="tag" data-category="Development">Development</span>
-            <span class="tag" data-category="Design">Design</span>
-            <span class="tag" data-category="Marketing">Marketing</span>
-            <span class="tag" data-category="Data">Data</span>
-        </div>
+        <select id="categoryFilter">
+            <option value="All">All Categories</option>
+            <option value="Development">Development</option>
+            <option value="Design">Design</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Data">Data</option>
+        </select>
     </div>
 
-    <div id="courseList" class="list"></div>
+    <div id="courseList" class="list">
+        {% for course in courses %}
+            <article class="item" data-title="{{ course.title|lower }}" data-category="{{ course.category }}">
+                <span class="pill {% if course.level == 'Beginner' %}success{% elif course.level == 'Intermediate' %}warning{% else %}danger{% endif %}">{{ course.level }}</span>
+                <div>
+                    <h3>{{ course.title }}</h3>
+                    <p class="muted">{{ course.category }} • {{ course.duration }} • {{ course.price }}</p>
+                </div>
+                <a class="button" href="{% url 'course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Enroll</a>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+    <h2 class="section-title" style="font-size:1.3rem;">Course Pricing</h2>
+    <p class="section-subtitle">Pricing is now shown directly on the Courses page.</p>
+    <div class="pricing-grid">
+        <div class="tier">
+            <h3>Starter Courses</h3>
+            <p style="font-size:1.5rem; color:#3730a3; margin:8px 0;">$39 - $49</p>
+            <p class="muted">Beginner-friendly courses with strong fundamentals.</p>
+        </div>
+        <div class="tier">
+            <h3>Intermediate Tracks</h3>
+            <p style="font-size:1.5rem; color:#3730a3; margin:8px 0;">$44 - $59</p>
+            <p class="muted">Hands-on, practical projects for growing professionals.</p>
+        </div>
+        <div class="tier">
+            <h3>Advanced Programs</h3>
+            <p style="font-size:1.5rem; color:#3730a3; margin:8px 0;">$69+</p>
+            <p class="muted">Deep expertise and production-level workflows.</p>
+        </div>
+    </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const courses = [
-        { title: 'Full-Stack JavaScript Bootcamp', category: 'Development', level: 'Beginner', duration: '10 weeks' },
-        { title: 'React for Intermediate Developers', category: 'Development', level: 'Intermediate', duration: '6 weeks' },
-        { title: 'Figma UI Design Workshop', category: 'Design', level: 'Beginner', duration: '4 weeks' },
-        { title: 'Advanced Product Design Systems', category: 'Design', level: 'Advanced', duration: '8 weeks' },
-        { title: 'Growth Marketing & SEO', category: 'Marketing', level: 'Intermediate', duration: '5 weeks' },
-        { title: 'Data Analytics with Python', category: 'Data', level: 'Beginner', duration: '7 weeks' }
-    ];
-
-    const courseList = document.getElementById('courseList');
     const searchInput = document.getElementById('searchInput');
-    const tagsContainer = document.getElementById('tags');
-    let currentCategory = 'All';
+    const categoryFilter = document.getElementById('categoryFilter');
+    const cards = Array.from(document.querySelectorAll('#courseList .item'));
 
-    function levelClass(level) {
-        if (level === 'Beginner') return 'pill success';
-        if (level === 'Intermediate') return 'pill warning';
-        return 'pill danger';
-    }
+    function filterCourses() {
+        const query = searchInput.value.toLowerCase().trim();
+        const category = categoryFilter.value;
 
-    function renderCourses() {
-        const keyword = searchInput.value.toLowerCase().trim();
-        const filtered = courses.filter(course => {
-            const matchesCategory = currentCategory === 'All' || course.category === currentCategory;
-            const matchesSearch = course.title.toLowerCase().includes(keyword);
-            return matchesCategory && matchesSearch;
+        cards.forEach((card) => {
+            const title = card.dataset.title;
+            const itemCategory = card.dataset.category;
+            const matchQuery = title.includes(query);
+            const matchCategory = category === 'All' || itemCategory === category;
+            card.style.display = (matchQuery && matchCategory) ? 'grid' : 'none';
         });
-
-        if (!filtered.length) {
-            courseList.innerHTML = '<div class="muted">No courses found for this filter.</div>';
-            return;
-        }
-
-        courseList.innerHTML = filtered.map(course => `
-            <article class="item">
-                <span class="${levelClass(course.level)}">${course.level}</span>
-                <div>
-                    <h3>${course.title}</h3>
-                    <p class="muted">${course.category} • ${course.duration}</p>
-                </div>
-                <button class="button">Enroll</button>
-            </article>
-        `).join('');
     }
 
-    tagsContainer.addEventListener('click', (event) => {
-        const selectedTag = event.target.closest('.tag');
-        if (!selectedTag) return;
-        currentCategory = selectedTag.dataset.category;
-        document.querySelectorAll('.tag').forEach(tag => tag.classList.remove('active'));
-        selectedTag.classList.add('active');
-        renderCourses();
-    });
-
-    searchInput.addEventListener('input', renderCourses);
-    renderCourses();
+    searchInput.addEventListener('input', filterCourses);
+    categoryFilter.addEventListener('change', filterCourses);
 </script>
 {% endblock %}
