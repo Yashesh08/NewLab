@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Register{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-wrap { max-width: 620px; margin: 0 auto; }
+    .auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .auth-form { display: grid; gap: 12px; }
+    .auth-form label { font-weight: 600; color: #374151; }
+    .auth-form input {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 0.95rem;
+    }
+    .auth-meta { color: #6b7280; font-size: 0.92rem; }
+
+    @media (max-width: 700px) {
+        .auth-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="card auth-wrap">
+    <h1 class="section-title">Create your account</h1>
+    <p class="section-subtitle">Join LearnSphere and start learning with expert-led courses.</p>
+
+    <form class="auth-form" action="#" method="post">
+        <div class="auth-grid">
+            <div>
+                <label for="first_name">First Name</label>
+                <input id="first_name" name="first_name" type="text" placeholder="First name" required>
+            </div>
+            <div>
+                <label for="last_name">Last Name</label>
+                <input id="last_name" name="last_name" type="text" placeholder="Last name" required>
+            </div>
+        </div>
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="Create a password" required>
+
+        <label for="confirm_password">Confirm Password</label>
+        <input id="confirm_password" name="confirm_password" type="password" placeholder="Repeat password" required>
+
+        <button class="button" type="submit">Register</button>
+    </form>
+
+    <p class="auth-meta" style="margin-top:14px;">Already have an account? <a href="{% url 'login' %}" style="color:#4f46e5; font-weight:700; text-decoration:none;">Login</a></p>
+</section>
+{% endblock %}

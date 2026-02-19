@@ -83,3 +83,11 @@ def instructors(request):
 
 def dashboard(request):
     return render(request, 'dashboard.html', {'active_page': 'dashboard'})
+
+
+def login_view(request):
+    return render(request, 'login.html', {'active_page': 'login'})
+
+
+def register_view(request):
+    return render(request, 'register.html', {'active_page': 'register'})
