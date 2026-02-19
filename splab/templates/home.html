@@ -2,42 +2,285 @@
 
 {% block title %}LearnSphere - Home{% endblock %}
 
-{% block content %}
-<section class="grid grid-2">
-    <div class="card">
-        <h1 class="section-title">Upskill with expert-led online courses</h1>
-        <p class="section-subtitle">Discover interactive learning paths in development, data science, design, and business. Learn at your own pace with projects and certificates.</p>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="button">Start Learning</button>
-            <button class="button" style="background:#e0e7ff; color:#3730a3;">Explore Catalog</button>
-        </div>
-    </div>
+{% block extra_head %}
+<style>
+    .hero {
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient(circle at 15% 10%, #c7d2fe 0%, rgba(199, 210, 254, 0.1) 35%), linear-gradient(135deg, #1e1b4b 0%, #3730a3 55%, #4f46e5 100%);
+        color: #eef2ff;
+        border-radius: 22px;
+        padding: clamp(24px, 4vw, 42px);
+        box-shadow: 0 30px 60px rgba(55, 48, 163, 0.3);
+    }
 
-    <div class="card grid" style="align-content:center;">
-        <div><strong style="font-size:1.5rem; color:#3730a3;">12,000+</strong><p style="color:#6b7280;">Active learners</p></div>
-        <div><strong style="font-size:1.5rem; color:#3730a3;">320+</strong><p style="color:#6b7280;">Courses available</p></div>
-        <div><strong style="font-size:1.5rem; color:#3730a3;">96%</strong><p style="color:#6b7280;">Completion satisfaction</p></div>
+    .hero::after {
+        content: "";
+        position: absolute;
+        right: -80px;
+        top: -70px;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 22px;
+        grid-template-columns: 1.35fr 1fr;
+        align-items: center;
+    }
+
+    .hero h1 {
+        font-size: clamp(1.9rem, 3.6vw, 3rem);
+        line-height: 1.12;
+        margin-bottom: 12px;
+    }
+
+    .hero p {
+        color: #dbeafe;
+        line-height: 1.7;
+        margin-bottom: 18px;
+    }
+
+    .hero-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .button.soft {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .hero-metrics {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .hero-metrics article {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 12px;
+        padding: 12px;
+    }
+
+    .hero-metrics strong {
+        display: block;
+        font-size: 1.1rem;
+    }
+
+    .hero-panel {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    .hero-panel h3 {
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+
+    .hero-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .hero-list div {
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.12);
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+
+    .logo-strip {
+        margin: 18px 0;
+        padding: 16px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        text-align: center;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .path-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 18px;
+    }
+
+    .path-card p {
+        color: var(--muted);
+        margin: 10px 0 14px;
+        line-height: 1.6;
+    }
+
+    .path-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: #475569;
+        font-size: 0.88rem;
+    }
+
+    .features-grid article {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 16px;
+        background: #fff;
+    }
+
+    .features-grid h3 {
+        margin-bottom: 8px;
+        font-size: 1rem;
+        color: #1e1b4b;
+    }
+
+    .features-grid p {
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 0.94rem;
+    }
+
+    .cta {
+        margin-top: 20px;
+        background: linear-gradient(120deg, #0f172a 0%, #1e1b4b 45%, #4338ca 100%);
+        color: #eef2ff;
+        padding: 28px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .cta p {
+        color: #cbd5e1;
+    }
+
+    @media (max-width: 900px) {
+        .hero-grid,
+        .logo-strip {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-grid">
+        <div>
+            <span class="pill" style="background:#22c55e;">New Cohort Starts 15th June</span>
+            <h1>Build job-ready skills with a complete learning platform.</h1>
+            <p>LearnSphere combines structured learning paths, mentor support, hands-on assignments, and placement-focused prep so you can turn learning into real career growth.</p>
+            <div class="hero-buttons">
+                <a href="{% url 'courses' %}" class="button" style="text-decoration:none;">Explore Courses</a>
+                <a href="{% url 'register' %}" class="button soft" style="text-decoration:none;">Start Free Trial</a>
+            </div>
+            <div class="hero-metrics">
+                <article><strong>40k+</strong><span>Learners enrolled</span></article>
+                <article><strong>4.8/5</strong><span>Average course rating</span></article>
+                <article><strong>320+</strong><span>Industry projects</span></article>
+            </div>
+        </div>
+
+        <aside class="hero-panel">
+            <h3>Your learning week at a glance</h3>
+            <div class="hero-list">
+                <div>✅ Complete "API Design Basics" video module</div>
+                <div>📝 Submit Assignment: Build a responsive dashboard</div>
+                <div>🎥 Live Mentor Session: Saturday, 7:00 PM</div>
+                <div>🏆 Milestone unlocked: 65% course completion</div>
+            </div>
+        </aside>
+    </div>
+</section>
+
+<section class="logo-strip">
+    <span>Google</span>
+    <span>Microsoft</span>
+    <span>Amazon</span>
+    <span>Adobe</span>
+    <span>IBM</span>
+</section>
+
+<section class="card">
+    <h2 class="section-title" style="font-size:1.5rem;">Top learning paths learners choose</h2>
+    <p class="section-subtitle">Pick guided tracks designed with hiring trends in mind and taught by professionals from top product companies.</p>
+    <div class="grid grid-3">
+        <article class="path-card">
+            <span class="pill success">Beginner Friendly</span>
+            <h3 style="margin-top:10px;">Frontend Engineer Career Path</h3>
+            <p>Master HTML, CSS, JavaScript, React, testing, and deployment while creating 8 portfolio-grade projects.</p>
+            <div class="path-meta"><span>⏱ 24 weeks</span><span>•</span><span>12 capstone tasks</span><span>•</span><span>Certificate</span></div>
+        </article>
+        <article class="path-card">
+            <span class="pill warning">Most Popular</span>
+            <h3 style="margin-top:10px;">Data Analyst to BI Specialist</h3>
+            <p>Build SQL depth, Python analytics workflows, dashboard storytelling, and business case presentations.</p>
+            <div class="path-meta"><span>⏱ 20 weeks</span><span>•</span><span>9 real datasets</span><span>•</span><span>Mentor reviews</span></div>
+        </article>
+        <article class="path-card">
+            <span class="pill danger">Advanced Track</span>
+            <h3 style="margin-top:10px;">Product Manager Leadership</h3>
+            <p>Learn roadmap planning, user research, product metrics, and stakeholder communication with simulated sprints.</p>
+            <div class="path-meta"><span>⏱ 18 weeks</span><span>•</span><span>6 case studies</span><span>•</span><span>Interview prep</span></div>
+        </article>
     </div>
 </section>
 
 <section class="card" style="margin-top:18px;">
-    <h2 class="section-title" style="font-size:1.3rem;">Featured Learning Paths</h2>
-    <div class="grid grid-3">
-        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
-            <span class="pill success">Beginner</span>
-            <h3 style="margin:10px 0 6px;">Frontend Engineer Path</h3>
-            <p style="color:#6b7280;">HTML, CSS, JavaScript, React and portfolio projects.</p>
+    <h2 class="section-title" style="font-size:1.4rem;">Everything you need to stay consistent</h2>
+    <div class="grid grid-3 features-grid">
+        <article>
+            <h3>Structured Curriculum</h3>
+            <p>Weekly plans with concept videos, notes, coding labs, and auto-tracked progress to avoid overwhelm.</p>
         </article>
-        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
-            <span class="pill warning">Intermediate</span>
-            <h3 style="margin:10px 0 6px;">Data Analyst Path</h3>
-            <p style="color:#6b7280;">Python, SQL, visualization, and dashboard storytelling.</p>
+        <article>
+            <h3>Assignments + Feedback</h3>
+            <p>Work on practical tasks and get rubric-based feedback from mentors to improve with every submission.</p>
         </article>
-        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
-            <span class="pill danger">Advanced</span>
-            <h3 style="margin:10px 0 6px;">Product Leadership Path</h3>
-            <p style="color:#6b7280;">Roadmapping, product metrics, and team strategy.</p>
+        <article>
+            <h3>Live Doubt Sessions</h3>
+            <p>Join regular live classes, group Q&A, and problem-solving meets to accelerate your growth.</p>
+        </article>
+        <article>
+            <h3>Community Learning</h3>
+            <p>Learn with peers in cohorts, take part in hackathons, and collaborate through study circles.</p>
+        </article>
+        <article>
+            <h3>Career Services</h3>
+            <p>Resume clinics, mock interviews, portfolio reviews, and referral networks for job opportunities.</p>
+        </article>
+        <article>
+            <h3>Mobile Friendly</h3>
+            <p>Continue learning on mobile with downloadable notes and saved lessons for your commute.</p>
         </article>
     </div>
+</section>
+
+<section class="cta">
+    <div>
+        <h2 style="margin-bottom:8px;">Ready to turn your learning into outcomes?</h2>
+        <p>Join thousands of learners building skills, projects, and confidence with LearnSphere.</p>
+    </div>
+    <a href="{% url 'register' %}" class="button" style="text-decoration:none; background:#22c55e;">Create Free Account</a>
 </section>
 {% endblock %}
