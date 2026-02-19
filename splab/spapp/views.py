@@ -52,6 +52,19 @@ COURSE_CATALOG = {
     },
 }
 
+PURCHASED_COURSE_SLUGS = [
+    'full-stack-javascript-bootcamp',
+    'figma-ui-design-workshop',
+    'data-analytics-with-python',
+]
+
+
+def get_course(slug):
+    course = COURSE_CATALOG.get(slug)
+    if not course:
+        raise Http404('Course not found')
+    return course
+
 
 def home(request):
     return render(request, 'home.html', {'active_page': 'home'})
@@ -59,21 +72,69 @@ def home(request):
 
 def courses(request):
     courses_list = [{'slug': slug, **course} for slug, course in COURSE_CATALOG.items()]
+    purchased_courses = [
+        {'slug': slug, **COURSE_CATALOG[slug]}
+        for slug in PURCHASED_COURSE_SLUGS
+        if slug in COURSE_CATALOG
+    ]
     return render(
         request,
         'courses.html',
-        {'active_page': 'courses', 'courses': courses_list},
+        {
+            'active_page': 'courses',
+            'courses': courses_list,
+            'purchased_courses': purchased_courses,
+        },
     )
 
 
 def course_detail(request, slug):
-    course = COURSE_CATALOG.get(slug)
-    if not course:
-        raise Http404('Course not found')
+    course = get_course(slug)
     return render(
         request,
         'course_detail.html',
         {'active_page': 'courses', 'course': course, 'slug': slug},
+    )
+
+
+def my_course_detail(request, slug):
+    course = get_course(slug)
+    if slug not in PURCHASED_COURSE_SLUGS:
+        raise Http404('Course not purchased')
+
+    module_outline = [
+        'Course orientation and setup',
+        'Core concepts and fundamentals',
+        'Hands-on implementation project',
+        'Assessment, notes review, and final Q&A',
+    ]
+    notes = [
+        'Key concepts summary and important formulas',
+        'Interview questions and model answers',
+        'Downloadable cheatsheet and glossary',
+    ]
+    video_lectures = [
+        {'title': 'Welcome & roadmap', 'duration': '12 min'},
+        {'title': 'Practical deep-dive lesson', 'duration': '34 min'},
+        {'title': 'Project walkthrough', 'duration': '41 min'},
+    ]
+    upcoming_meets = [
+        {'topic': 'Live doubt solving', 'date': 'Saturday, 6:00 PM'},
+        {'topic': 'Project review clinic', 'date': 'Wednesday, 7:30 PM'},
+    ]
+
+    return render(
+        request,
+        'my_course_detail.html',
+        {
+            'active_page': 'courses',
+            'course': course,
+            'slug': slug,
+            'module_outline': module_outline,
+            'notes': notes,
+            'video_lectures': video_lectures,
+            'upcoming_meets': upcoming_meets,
+        },
     )
 
 

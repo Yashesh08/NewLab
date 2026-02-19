@@ -25,13 +25,6 @@
     }
     .muted { color:#6b7280; }
 
-    .pricing-card {
-        border: 1px solid #dbeafe;
-        background: #f8fbff;
-        border-radius: 12px;
-        padding: 16px;
-    }
-
     .pricing-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -56,8 +49,26 @@
 {% endblock %}
 
 {% block content %}
+<section class="card" style="margin-bottom:18px;">
+    <h1 class="section-title">My Purchased Courses</h1>
+    <p class="section-subtitle">These are courses you already bought. Click "Open Course" to view content, notes, video lectures, and upcoming live meets.</p>
+
+    <div class="list">
+        {% for course in purchased_courses %}
+            <article class="item">
+                <span class="pill success">Owned</span>
+                <div>
+                    <h3>{{ course.title }}</h3>
+                    <p class="muted">{{ course.category }} • {{ course.duration }}</p>
+                </div>
+                <a class="button" href="{% url 'my_course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Open Course</a>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+
 <section class="card">
-    <h1 class="section-title">Browse Courses</h1>
+    <h2 class="section-title">Browse Courses</h2>
     <p class="section-subtitle">Search and filter by category, then open a course page from Enroll.</p>
 
     <div class="controls">
@@ -87,7 +98,7 @@
 
 <section class="card" style="margin-top:18px;">
     <h2 class="section-title" style="font-size:1.3rem;">Course Pricing</h2>
-    <p class="section-subtitle">Pricing is now shown directly on the Courses page.</p>
+    <p class="section-subtitle">Pricing is shown directly on the Courses page.</p>
     <div class="pricing-grid">
         <div class="tier">
             <h3>Starter Courses</h3>
