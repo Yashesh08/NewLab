@@ -1,26 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}LearnSphere - Register{% endblock %}
 
-{% block extra_head %}
-<style>
-    .auth-wrap { max-width: 620px; margin: 0 auto; }
-    .auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .auth-form { display: grid; gap: 12px; }
-    .auth-form label { font-weight: 600; color: #374151; }
-    .auth-form input {
-        width: 100%;
-        padding: 11px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        font-size: 0.95rem;
-    }
-    .auth-meta { color: #6b7280; font-size: 0.92rem; }
-
-    @media (max-width: 700px) {
-        .auth-grid { grid-template-columns: 1fr; }
-    }
-</style>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/register.css' %}">
 {% endblock %}
 
 {% block content %}

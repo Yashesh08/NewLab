@@ -1,28 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}LearnSphere - My Course - {{ course.title }}{% endblock %}
 
-{% block extra_head %}
-<style>
-    .stack { display: grid; gap: 16px; }
-    .module, .panel {
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 14px;
-        background: #fff;
-    }
-    .video-row, .meet-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        flex-wrap: wrap;
-        padding: 10px 0;
-        border-bottom: 1px solid #e5e7eb;
-    }
-    .video-row:last-child,
-    .meet-row:last-child { border-bottom: 0; }
-    .muted { color: #6b7280; }
-</style>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/my_course_detail.css' %}">
 {% endblock %}
 
 {% block content %}

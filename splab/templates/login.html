@@ -1,21 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}LearnSphere - Login{% endblock %}
 
-{% block extra_head %}
-<style>
-    .auth-wrap { max-width: 520px; margin: 0 auto; }
-    .auth-form { display: grid; gap: 12px; }
-    .auth-form label { font-weight: 600; color: #374151; }
-    .auth-form input {
-        width: 100%;
-        padding: 11px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        font-size: 0.95rem;
-    }
-    .auth-meta { color: #6b7280; font-size: 0.92rem; }
-</style>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/login.css' %}">
 {% endblock %}
 
 {% block content %}
