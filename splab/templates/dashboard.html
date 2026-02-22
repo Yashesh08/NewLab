@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Dashboard{% endblock %}
+
+{% block content %}
+<section class="grid grid-2" style="margin-bottom:16px;">
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Weekly Learning Goal</h2>
+        <p class="section-subtitle">You completed 6 of 8 target hours this week.</p>
+        <div style="height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+            <div style="height:100%; width:75%; background:#4f46e5;"></div>
+        </div>
+    </article>
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Current Streak</h2>
+        <p class="section-subtitle">11-day learning streak. Keep it going!</p>
+        <button class="button">Resume Course</button>
+    </article>
+</section>
+
+<section class="card">
+    <h2 class="section-title" style="font-size:1.3rem;">My Courses</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Category</th>
+                <th>Progress</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>HTML & CSS Masterclass</td>
+                <td>Development</td>
+                <td>78%</td>
+                <td><span class="pill warning">In Progress</span></td>
+            </tr>
+            <tr>
+                <td>UI/UX Fundamentals</td>
+                <td>Design</td>
+                <td>45%</td>
+                <td><span class="pill warning">In Progress</span></td>
+            </tr>
+            <tr>
+                <td>Digital Marketing Basics</td>
+                <td>Marketing</td>
+                <td>100%</td>
+                <td><span class="pill success">Completed</span></td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+{% endblock %}

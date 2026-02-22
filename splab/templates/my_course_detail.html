@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}LearnSphere - My Course - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/my_course_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="card">
+    <a href="{% url 'courses' %}" style="text-decoration:none; color:#4f46e5; font-weight:700;">← Back to Courses</a>
+    <h1 class="section-title" style="margin-top:12px;">{{ course.title }}</h1>
+    <p class="section-subtitle">Everything for your purchased course: modules, notes, videos, upcoming meets, and learning resources.</p>
+
+    <div class="grid grid-3" style="margin-bottom:16px;">
+        <div class="module"><p class="muted">Category</p><strong>{{ course.category }}</strong></div>
+        <div class="module"><p class="muted">Level</p><strong>{{ course.level }}</strong></div>
+        <div class="module"><p class="muted">Duration</p><strong>{{ course.duration }}</strong></div>
+    </div>
+
+    <div class="stack">
+        <article class="panel">
+            <h2 style="margin-bottom:10px;">Course Content</h2>
+            <ol style="padding-left:18px; line-height:1.8;">
+                {% for item in module_outline %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ol>
+        </article>
+
+        <article class="panel">
+            <h2 style="margin-bottom:10px;">Video Lectures</h2>
+            {% for lecture in video_lectures %}
+                <div class="video-row">
+                    <span>{{ lecture.title }}</span>
+                    <strong>{{ lecture.duration }}</strong>
+                </div>
+            {% endfor %}
+        </article>
+
+        <article class="panel">
+            <h2 style="margin-bottom:10px;">Notes & Resources</h2>
+            <ul style="padding-left:18px; line-height:1.8;">
+                {% for note in notes %}
+                    <li>{{ note }}</li>
+                {% endfor %}
+            </ul>
+        </article>
+
+        <article class="panel">
+            <h2 style="margin-bottom:10px;">Upcoming Live Meets</h2>
+            {% for meet in upcoming_meets %}
+                <div class="meet-row">
+                    <span>{{ meet.topic }}</span>
+                    <strong>{{ meet.date }}</strong>
+                </div>
+            {% endfor %}
+        </article>
+    </div>
+</section>
+{% endblock %}
