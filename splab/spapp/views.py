@@ -149,6 +149,39 @@ def dashboard(request):
     return render(request, 'dashboard.html', {'active_page': 'dashboard'})
 
 
+def add_video_lecture(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please log in to upload a lecture.')
+        return redirect('login')
+
+    lecture_data = None
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        course_name = request.POST.get('course_name', '').strip()
+        video_url = request.POST.get('video_url', '').strip()
+        duration = request.POST.get('duration', '').strip()
+        description = request.POST.get('description', '').strip()
+
+        lecture_data = {
+            'title': title,
+            'course_name': course_name,
+            'video_url': video_url,
+            'duration': duration,
+            'description': description,
+        }
+
+        if not all([title, course_name, video_url, duration, description]):
+            messages.error(request, 'Please fill in all lecture details before submitting.')
+        else:
+            messages.success(request, f'Lecture "{title}" has been added successfully.')
+
+    return render(
+        request,
+        'add_video_lecture.html',
+        {'active_page': 'add_video_lecture', 'lecture': lecture_data},
+    )
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
