@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Dashboard{% endblock %}
+
+{% block content %}
+<section class="grid grid-2" style="margin-bottom:16px;">
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Weekly Learning Goal</h2>
+        <p class="section-subtitle">You completed {{ completed_hours }} of {{ learning_goal }} target hours this week.</p>
+        <div style="height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+            <div style="height:100%; width:{{ goal_progress }}%; background:#4f46e5;"></div>
+        </div>
+    </article>
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Current Streak</h2>
+        <p class="section-subtitle">{{ streak_days }}-day learning streak. Keep it going!</p>
+        <a href="{% url 'courses' %}" class="button" style="text-decoration:none; display:inline-block;">Resume Course</a>
+    </article>
+</section>
+
+<section class="card">
+    <h2 class="section-title" style="font-size:1.3rem;">My Courses</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Category</th>
+                <th>Progress</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in courses_data %}
+            <tr>
+                <td>{{ row.course }}</td>
+                <td>{{ row.category }}</td>
+                <td>{{ row.progress }}%</td>
+                <td><span class="pill {{ row.status_class }}">{{ row.status_label }}</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No enrollments yet. Go to Courses and enroll to begin.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
