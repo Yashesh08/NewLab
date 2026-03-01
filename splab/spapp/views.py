@@ -375,6 +375,35 @@ def register_view(request):
     return render(request, 'register.html', {'active_page': 'register'})
 
 
+
+def admin_panel(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please login as admin to access admin panel.')
+        return redirect('login')
+
+    if not request.user.is_staff:
+        messages.error(request, 'Only admin users can access the admin panel.')
+        return redirect('home')
+
+    total_users = User.objects.count()
+    total_courses = Course.objects.count()
+    total_enrollments = Enrollment.objects.count()
+    active_enrollments = Enrollment.objects.filter(status=Enrollment.Status.ACTIVE).count()
+
+    recent_users = User.objects.order_by('-date_joined')[:5]
+    recent_courses = Course.objects.order_by('-created_at')[:5]
+
+    context = {
+        'active_page': 'admin_panel',
+        'total_users': total_users,
+        'total_courses': total_courses,
+        'total_enrollments': total_enrollments,
+        'active_enrollments': active_enrollments,
+        'recent_users': recent_users,
+        'recent_courses': recent_courses,
+    }
+    return render(request, 'admin_panel.html', context)
+
 def logout_view(request):
     if request.user.is_authenticated:
         logout(request)
