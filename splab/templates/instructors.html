@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Instructors{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h1 class="section-title">Meet Our Instructors</h1>
+    <p class="section-subtitle">Learn from industry experts with real project experience.</p>
+    <div class="grid grid-3">
+        {% for instructor in instructors %}
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+            <h3>{{ instructor.name }}</h3>
+            <p style="color:#6b7280; margin:8px 0;">{{ instructor.title }}</p>
+            <p>{{ instructor.bio }}</p>
+        </article>
+        {% empty %}
+        <p>No instructors available yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
