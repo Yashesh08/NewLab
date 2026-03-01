@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db.models import Avg, Count
 from django.http import Http404
 from django.shortcuts import redirect, render
@@ -47,6 +49,16 @@ def _course_to_dict(course):
         'description': course.description or course.short_description,
         'short_description': course.short_description,
     }
+
+
+def _send_notification_email(to_email, subject, message):
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'purohityashesh@gmail.com'),
+        recipient_list=[to_email],
+        fail_silently=False,
+    )
 
 
 def get_course(slug):
@@ -139,11 +151,63 @@ def course_detail(request, slug):
     except Course.DoesNotExist as exc:
         raise Http404('Course not found') from exc
 
+    is_enrolled = False
+    if request.user.is_authenticated:
+        is_enrolled = Enrollment.objects.filter(user=request.user, course=course).exists()
+
     return render(
         request,
         'course_detail.html',
-        {'active_page': 'courses', 'course': _course_to_dict(course), 'slug': slug},
+        {
+            'active_page': 'courses',
+            'course': _course_to_dict(course),
+            'slug': slug,
+            'is_enrolled': is_enrolled,
+        },
     )
+
+
+def buy_course(request, slug):
+    if request.method != 'POST':
+        return redirect('course_detail', slug=slug)
+
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please login before purchasing a course.')
+        return redirect('login')
+
+    try:
+        course = get_course(slug)
+    except Course.DoesNotExist as exc:
+        raise Http404('Course not found') from exc
+
+    enrollment, created = Enrollment.objects.get_or_create(
+        user=request.user,
+        course=course,
+        defaults={'status': Enrollment.Status.ACTIVE, 'progress_percent': 0},
+    )
+
+    if created:
+        try:
+            _send_notification_email(
+                to_email=request.user.email,
+                subject=f'Course purchase confirmed: {course.title}',
+                message=(
+                    f'Hi {request.user.first_name or "Learner"},\n\n'
+                    f'Your purchase for "{course.title}" is confirmed.\n'
+                    'You can now access all course content from your dashboard.\n\n'
+                    'Thanks for learning with LearnSphere!'
+                ),
+            )
+            messages.success(request, 'Purchase successful! A confirmation email has been sent.')
+        except Exception:
+            messages.warning(request, 'Purchase successful, but we could not send the confirmation email right now.')
+    else:
+        if enrollment.status == Enrollment.Status.PAUSED:
+            enrollment.status = Enrollment.Status.ACTIVE
+            enrollment.save(update_fields=['status', 'updated_at'])
+        messages.info(request, 'You already own this course. Opening your course workspace.')
+
+    return redirect('my_course_detail', slug=slug)
 
 
 def my_course_detail(request, slug):
@@ -290,7 +354,22 @@ def register_view(request):
             last_name=last_name,
         )
         login(request, user)
-        messages.success(request, 'Account created successfully. Welcome to LearnSphere!')
+
+        try:
+            _send_notification_email(
+                to_email=user.email,
+                subject='Welcome to LearnSphere',
+                message=(
+                    f'Hi {user.first_name or "Learner"},\n\n'
+                    'Your account has been created successfully on LearnSphere.\n'
+                    'Start exploring courses and begin your learning journey today.\n\n'
+                    'Thank you!'
+                ),
+            )
+            messages.success(request, 'Account created successfully. A welcome email has been sent.')
+        except Exception:
+            messages.warning(request, 'Account created successfully, but we could not send the welcome email right now.')
+
         return redirect('dashboard')
 
     return render(request, 'register.html', {'active_page': 'register'})
