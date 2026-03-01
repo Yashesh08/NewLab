@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Admin Panel{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom:16px;">
+    <h1 class="section-title">Admin Panel</h1>
+    <p class="section-subtitle">This area is restricted to admin accounts only.</p>
+
+    <div class="grid grid-2">
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Users</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_users }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Courses</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_courses }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Enrollments</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_enrollments }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Active Enrollments</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ active_enrollments }}</strong>
+        </article>
+    </div>
+</section>
+
+<section class="grid grid-2">
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Recent Users</h2>
+        <ul style="padding-left:18px; line-height:1.9;">
+            {% for user in recent_users %}
+                <li>{{ user.get_full_name|default:user.username }} ({{ user.email }})</li>
+            {% empty %}
+                <li>No users found.</li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Recently Added Courses</h2>
+        <ul style="padding-left:18px; line-height:1.9;">
+            {% for course in recent_courses %}
+                <li>{{ course.title }} • {{ course.category }}</li>
+            {% empty %}
+                <li>No courses found.</li>
+            {% endfor %}
+        </ul>
+    </article>
+</section>
+{% endblock %}
