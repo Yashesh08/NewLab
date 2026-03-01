@@ -1,12 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>$Title$</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-<h1>hello</h1>
-$END$
-</body>
-</html>
+{% block title %}LearnSphere - Home{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-grid">
+        <div>
+            <span class="pill" style="background:#22c55e;">{{ hero_badge }}</span>
+            <h1>{{ hero_title }}</h1>
+            <p>{{ hero_subtitle }}</p>
+            <div class="hero-buttons">
+                <a href="{% url 'courses' %}" class="button" style="text-decoration:none;">Explore Courses</a>
+                <a href="{% url 'register' %}" class="button soft" style="text-decoration:none;">Start Free Trial</a>
+            </div>
+            <div class="hero-metrics">
+                {% for metric in hero_metrics %}
+                <article><strong>{{ metric.value }}</strong><span>{{ metric.label }}</span></article>
+                {% endfor %}
+            </div>
+        </div>
+
+        <aside class="hero-panel">
+            <h3>Your learning week at a glance</h3>
+            <div class="hero-list">
+                {% for item in learning_week %}
+                <div>{{ item }}</div>
+                {% endfor %}
+            </div>
+        </aside>
+    </div>
+</section>
+
+<section class="logo-strip">
+    {% for partner in partners %}
+    <span>{{ partner }}</span>
+    {% endfor %}
+</section>
+
+<section class="card">
+    <h2 class="section-title" style="font-size:1.5rem;">Top learning paths learners choose</h2>
+    <p class="section-subtitle">Pick guided tracks designed with hiring trends in mind and taught by professionals from top product companies.</p>
+    <div class="grid grid-3">
+        {% for course in featured_paths %}
+        <article class="path-card">
+            <span class="pill {{ course.badge_class }}">{{ course.badge_text }}</span>
+            <h3 style="margin-top:10px;">{{ course.title }}</h3>
+            <p>{{ course.description }}</p>
+            <div class="path-meta">
+                <span>⏱ {{ course.duration }}</span><span>•</span><span>{{ course.projects }} projects</span><span>•</span><span>{{ course.price }}</span>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+    <h2 class="section-title" style="font-size:1.4rem;">Everything you need to stay consistent</h2>
+    <div class="grid grid-3 features-grid">
+        {% for feature in features %}
+        <article>
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="cta">
+    <div>
+        <h2 style="margin-bottom:8px;">Ready to turn your learning into outcomes?</h2>
+        <p>Join thousands of learners building skills, projects, and confidence with LearnSphere.</p>
+    </div>
+    <a href="{% url 'register' %}" class="button" style="text-decoration:none; background:#22c55e;">Create Free Account</a>
+</section>
+{% endblock %}
