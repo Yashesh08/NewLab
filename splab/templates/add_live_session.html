@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Schedule Live Session{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 760px; margin: 0 auto;">
+    <h1 class="section-title">Schedule Live Session</h1>
+    <p class="section-subtitle">Create a live mentoring or doubt-clearing session for your students.</p>
+
+    <form method="post" class="grid" style="gap: 14px;">
+        {% csrf_token %}
+        <label>
+            <strong>Session topic</strong>
+            <input type="text" name="topic" value="{{ session_info.topic|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Course name</strong>
+            <input type="text" name="course_name" value="{{ session_info.course_name|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Date</strong>
+            <input type="date" name="session_date" value="{{ session_info.session_date|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Time</strong>
+            <input type="time" name="session_time" value="{{ session_info.session_time|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Meeting link</strong>
+            <input type="url" name="meet_link" placeholder="https://" value="{{ session_info.meet_link|default:'' }}" required>
+        </label>
+
+        <button class="button" type="submit">Publish Session</button>
+    </form>
+</section>
+
+{% if session_info and session_info.topic and session_info.course_name and session_info.session_date and session_info.session_time and session_info.meet_link %}
+<section class="card" style="max-width: 760px; margin: 16px auto 0;">
+    <h2 class="section-title" style="font-size: 1.25rem;">Session Preview</h2>
+    <p><strong>Topic:</strong> {{ session_info.topic }}</p>
+    <p><strong>Course:</strong> {{ session_info.course_name }}</p>
+    <p><strong>Schedule:</strong> {{ session_info.session_date }} at {{ session_info.session_time }}</p>
+    <p><strong>Link:</strong> <a href="{{ session_info.meet_link }}" target="_blank" rel="noopener noreferrer">{{ session_info.meet_link }}</a></p>
+</section>
+{% endif %}
+{% endblock %}
