@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
 from django.db.models import Avg, Count
@@ -66,11 +67,16 @@ def _is_instructor(user):
         return False
     return user.groups.filter(name='Instructor').exists()
 
+def _is_admin(user):
+    if not user.is_authenticated:
+        return False
+    return user.is_staff or user.is_superuser
+
 
 def _get_user_role(user):
     if not user.is_authenticated:
         return 'guest'
-    if user.is_superuser or user.is_staff:
+    if _is_admin(user):
         return 'admin'
     if _is_instructor(user):
         return 'instructor'
@@ -183,13 +189,10 @@ def course_detail(request, slug):
     )
 
 
+@login_required(login_url='login')
 def buy_course(request, slug):
     if request.method != 'POST':
         return redirect('course_detail', slug=slug)
-
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please login before purchasing a course.')
-        return redirect('login')
 
     try:
         course = get_course(slug)
@@ -226,10 +229,8 @@ def buy_course(request, slug):
     return redirect('my_course_detail', slug=slug)
 
 
+@login_required(login_url='login')
 def my_course_detail(request, slug):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please login to access purchased courses.')
-        return redirect('login')
 
     try:
         enrollment = (
@@ -274,10 +275,8 @@ def instructors(request):
     return render(request, 'instructors.html', {'active_page': 'instructors', 'instructors': instructors_list})
 
 
+@login_required(login_url='login')
 def dashboard(request):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please login to open your dashboard.')
-        return redirect('login')
 
     enrollments = Enrollment.objects.filter(user=request.user).select_related('course').order_by('-created_at')
     courses_data = [
@@ -411,14 +410,9 @@ def register_view(request):
 
 
 
+@login_required(login_url='login')
+@user_passes_test(_is_admin, login_url='home', redirect_field_name=None)
 def admin_panel(request):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please login as admin to access admin panel.')
-        return redirect('login')
-
-    if not (request.user.is_staff or request.user.is_superuser):
-        messages.error(request, 'Only admin users can access the admin panel.')
-        return redirect('home')
 
     total_users = User.objects.count()
     total_courses = Course.objects.count()
@@ -440,14 +434,9 @@ def admin_panel(request):
     return render(request, 'admin_panel.html', context)
 
 
+@login_required(login_url='login')
+@user_passes_test(_is_instructor, login_url='home', redirect_field_name=None)
 def instructor_panel(request):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please login as instructor to access instructor panel.')
-        return redirect('login')
-
-    if not _is_instructor(request.user):
-        messages.error(request, 'Only instructor users can access the instructor panel.')
-        return redirect('home')
 
     courses_taught = (
         Course.objects
@@ -476,8 +465,8 @@ def instructor_panel(request):
     }
     return render(request, 'instructor_panel.html', context)
 
+@login_required(login_url='login')
 def logout_view(request):
-    if request.user.is_authenticated:
-        logout(request)
-        messages.success(request, 'You have been logged out successfully.')
+    logout(request)
+    messages.success(request, 'You have been logged out successfully.')
     return redirect('home')
