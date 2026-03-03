@@ -4,11 +4,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Max
+from django.utils import timezone
+from django.utils.text import slugify
 from django.http import Http404
 from django.shortcuts import redirect, render
 
-from .models import Course, Enrollment, Instructor
+from .models import Assignment, AssignmentSubmission, Course, CourseNote, CourseSection, Enrollment, Instructor, VideoLecture
 
 
 HOME_FEATURES = [
@@ -82,6 +84,25 @@ def _get_user_role(user):
         return 'instructor'
     return 'user'
 
+
+
+def _generate_unique_slug(title):
+    base_slug = slugify(title) or 'course'
+    slug = base_slug
+    counter = 1
+    while Course.objects.filter(slug=slug).exists():
+        counter += 1
+        slug = f'{base_slug}-{counter}'
+    return slug
+
+
+def _get_instructor_courses(user):
+    return (
+        Course.objects
+        .filter(instructors__name__iexact=user.get_full_name())
+        .distinct()
+        .order_by('title')
+    )
 
 def get_course(slug):
     course = Course.objects.filter(is_published=True).prefetch_related('instructors').get(slug=slug)
@@ -236,7 +257,7 @@ def my_course_detail(request, slug):
         enrollment = (
             Enrollment.objects
             .select_related('course')
-            .prefetch_related('course__sections__lectures', 'course__notes', 'course__live_meets')
+            .prefetch_related('course__sections__lectures', 'course__notes', 'course__live_meets', 'course__assignments')
             .get(user=request.user, course__slug=slug)
         )
     except Enrollment.DoesNotExist as exc:
@@ -255,6 +276,19 @@ def my_course_detail(request, slug):
         for meet in course.live_meets.all()
     ]
 
+    assignments = list(course.assignments.order_by('due_at'))
+    attempts = {
+        attempt.assignment_id: attempt
+        for attempt in AssignmentSubmission.objects.filter(user=request.user, assignment__course=course).select_related('assignment')
+    }
+    assignment_rows = [
+        {
+            'assignment': assignment,
+            'attempt': attempts.get(assignment.id),
+        }
+        for assignment in assignments
+    ]
+
     return render(
         request,
         'my_course_detail.html',
@@ -266,6 +300,7 @@ def my_course_detail(request, slug):
             'notes': notes,
             'video_lectures': video_lectures,
             'upcoming_meets': upcoming_meets,
+            'assignment_rows': assignment_rows,
         },
     )
 
@@ -386,6 +421,12 @@ def register_view(request):
         if user_type == 'instructor':
             instructors_group, _ = Group.objects.get_or_create(name='Instructor')
             user.groups.add(instructors_group)
+            full_name = f'{first_name} {last_name}'.strip()
+            if full_name:
+                Instructor.objects.get_or_create(
+                    name=full_name,
+                    defaults={'title': 'Instructor', 'bio': 'Auto-created instructor profile.'},
+                )
 
         login(request, user)
 
@@ -414,6 +455,47 @@ def register_view(request):
 @user_passes_test(_is_admin, login_url='home', redirect_field_name=None)
 def admin_panel(request):
 
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create_course':
+            title = request.POST.get('title', '').strip()
+            category = request.POST.get('category', '').strip()
+            short_description = request.POST.get('short_description', '').strip()
+            description = request.POST.get('description', '').strip()
+            level = request.POST.get('level', Course.Level.BEGINNER)
+            duration_weeks = request.POST.get('duration_weeks', '1').strip()
+            price = request.POST.get('price', '0').strip()
+            instructor_ids = request.POST.getlist('instructor_ids')
+
+            if not all([title, category, short_description]):
+                messages.error(request, 'Title, category, and short description are required.')
+                return redirect('admin_panel')
+
+            try:
+                duration_weeks_value = max(1, int(duration_weeks))
+                price_value = max(0, float(price))
+            except ValueError:
+                messages.error(request, 'Duration and price must be valid numbers.')
+                return redirect('admin_panel')
+
+            course = Course.objects.create(
+                title=title,
+                slug=_generate_unique_slug(title),
+                category=category,
+                short_description=short_description,
+                description=description,
+                level=level if level in Course.Level.values else Course.Level.BEGINNER,
+                duration_weeks=duration_weeks_value,
+                price=price_value,
+                is_published=True,
+            )
+            if instructor_ids:
+                course.instructors.set(Instructor.objects.filter(id__in=instructor_ids, is_active=True))
+
+            messages.success(request, f'Course "{course.title}" created and instructor mapping saved.')
+            return redirect('admin_panel')
+
     total_users = User.objects.count()
     total_courses = Course.objects.count()
     total_enrollments = Enrollment.objects.count()
@@ -430,6 +512,8 @@ def admin_panel(request):
         'active_enrollments': active_enrollments,
         'recent_users': recent_users,
         'recent_courses': recent_courses,
+        'instructors': Instructor.objects.filter(is_active=True).order_by('name'),
+        'course_levels': Course.Level.choices,
     }
     return render(request, 'admin_panel.html', context)
 
@@ -438,21 +522,17 @@ def admin_panel(request):
 @user_passes_test(_is_instructor, login_url='home', redirect_field_name=None)
 def instructor_panel(request):
 
-    courses_taught = (
-        Course.objects
-        .filter(instructors__name__iexact=request.user.get_full_name())
-        .distinct()
-        .order_by('title')
-    )
-    if not courses_taught.exists():
-        courses_taught = Course.objects.filter(is_published=True).order_by('title')[:5]
+    courses_taught = _get_instructor_courses(request.user)
 
     course_rows = [
         {
+            'id': course.id,
             'title': course.title,
             'category': course.category,
             'level': course.get_level_display(),
             'enrollment_count': course.enrollments.count(),
+            'materials_count': course.notes.count() + course.sections.count(),
+            'tests_count': course.assignments.count(),
         }
         for course in courses_taught
     ]
@@ -464,6 +544,134 @@ def instructor_panel(request):
         'total_enrollments': sum(item['enrollment_count'] for item in course_rows),
     }
     return render(request, 'instructor_panel.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(_is_instructor, login_url='home', redirect_field_name=None)
+def manage_instructor_course(request, course_id):
+    course = _get_instructor_courses(request.user).filter(id=course_id).first()
+    if course is None:
+        messages.error(request, 'Course not found in your instructor assignment list.')
+        return redirect('instructor_panel')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add_section':
+            section_title = request.POST.get('section_title', '').strip()
+            if section_title:
+                next_order = (course.sections.aggregate(max_order=Max('order')).get('max_order') or 0) + 1
+                CourseSection.objects.create(course=course, title=section_title, order=next_order)
+                messages.success(request, 'Section added successfully.')
+            else:
+                messages.error(request, 'Section title is required.')
+
+        elif action == 'add_video':
+            section_id = request.POST.get('section_id')
+            title = request.POST.get('video_title', '').strip()
+            video_url = request.POST.get('video_url', '').strip()
+            duration = request.POST.get('duration_minutes', '1').strip()
+
+            section = course.sections.filter(id=section_id).first()
+            if not section or not title or not video_url:
+                messages.error(request, 'Section, title, and video URL are required for lecture.')
+            else:
+                try:
+                    duration_value = max(1, int(duration))
+                except ValueError:
+                    duration_value = 1
+                next_order = section.lectures.count() + 1
+                VideoLecture.objects.create(
+                    section=section,
+                    title=title,
+                    video_url=video_url,
+                    duration_minutes=duration_value,
+                    order=next_order,
+                )
+                messages.success(request, 'Video lecture added.')
+
+        elif action == 'add_note':
+            note_title = request.POST.get('note_title', '').strip()
+            note_content = request.POST.get('note_content', '').strip()
+            note_file_url = request.POST.get('note_file_url', '').strip()
+            if not note_title:
+                messages.error(request, 'Material title is required.')
+            else:
+                CourseNote.objects.create(course=course, title=note_title, content=note_content, file_url=note_file_url)
+                messages.success(request, 'Material added successfully.')
+
+        elif action == 'add_test':
+            test_title = request.POST.get('test_title', '').strip()
+            instructions = request.POST.get('instructions', '').strip()
+            due_at_raw = request.POST.get('due_at', '').strip()
+            max_score_raw = request.POST.get('max_score', '100').strip()
+
+            if not all([test_title, instructions, due_at_raw]):
+                messages.error(request, 'Test title, instructions, and due date are required.')
+            else:
+                try:
+                    due_at = timezone.datetime.fromisoformat(due_at_raw)
+                    due_at = timezone.make_aware(due_at) if timezone.is_naive(due_at) else due_at
+                except ValueError:
+                    messages.error(request, 'Invalid due date format.')
+                    return redirect('manage_instructor_course', course_id=course.id)
+
+                try:
+                    max_score = max(1, int(max_score_raw))
+                except ValueError:
+                    max_score = 100
+                Assignment.objects.create(
+                    course=course,
+                    title=test_title,
+                    instructions=instructions,
+                    due_at=due_at,
+                    max_score=max_score,
+                )
+                messages.success(request, 'Test added successfully.')
+
+        return redirect('manage_instructor_course', course_id=course.id)
+
+    context = {
+        'active_page': 'instructor_panel',
+        'course': course,
+        'sections': course.sections.order_by('order', 'id'),
+        'notes': course.notes.order_by('title'),
+        'assignments': course.assignments.order_by('due_at'),
+    }
+    return render(request, 'instructor_course_manage.html', context)
+
+
+@login_required(login_url='login')
+def attempt_test(request, slug, assignment_id):
+    if request.method != 'POST':
+        return redirect('my_course_detail', slug=slug)
+
+    enrollment = Enrollment.objects.filter(user=request.user, course__slug=slug).select_related('course').first()
+    if not enrollment:
+        raise Http404('Course not purchased')
+
+    assignment = Assignment.objects.filter(id=assignment_id, course=enrollment.course).first()
+    if not assignment:
+        raise Http404('Test not found')
+
+    answer_text = request.POST.get('answer_text', '').strip()
+    submission_url = request.POST.get('submission_url', '').strip()
+
+    if not answer_text and not submission_url:
+        messages.error(request, 'Please provide an answer text or submission URL.')
+        return redirect('my_course_detail', slug=slug)
+
+    submission, _ = AssignmentSubmission.objects.update_or_create(
+        assignment=assignment,
+        user=request.user,
+        defaults={
+            'remarks': answer_text,
+            'submission_url': submission_url,
+            'status': AssignmentSubmission.Status.SUBMITTED,
+        },
+    )
+    messages.success(request, f'Your attempt for "{submission.assignment.title}" has been submitted.')
+    return redirect('my_course_detail', slug=slug)
 
 @login_required(login_url='login')
 def logout_view(request):
