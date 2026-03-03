@@ -20,6 +20,18 @@
         <label for="password">Password</label>
         <input id="password" name="password" type="password" placeholder="••••••••" required>
 
+        <fieldset class="role-selector">
+            <legend>Login as</legend>
+            <label>
+                <input type="radio" name="user_role" value="student" {% if user_role != 'tutor' %}checked{% endif %}>
+                Student
+            </label>
+            <label>
+                <input type="radio" name="user_role" value="tutor" {% if user_role == 'tutor' %}checked{% endif %}>
+                Tutor
+            </label>
+        </fieldset>
+
         <button class="button" type="submit">Login</button>
     </form>
 

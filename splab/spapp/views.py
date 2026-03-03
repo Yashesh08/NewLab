@@ -61,12 +61,22 @@ PURCHASED_COURSE_SLUGS = [
     'data-analytics-with-python',
 ]
 
+TUTOR_COURSE_SLUGS = [
+    'full-stack-javascript-bootcamp',
+    'react-for-intermediate-developers',
+    'data-analytics-with-python',
+]
+
 
 def get_course(slug):
     course = COURSE_CATALOG.get(slug)
     if not course:
         raise Http404('Course not found')
     return course
+
+
+def is_tutor(request):
+    return request.session.get('user_role') == 'tutor'
 
 
 def home(request):
@@ -146,13 +156,43 @@ def instructors(request):
 
 
 def dashboard(request):
+    if is_tutor(request):
+        return redirect('tutor_dashboard')
     return render(request, 'dashboard.html', {'active_page': 'dashboard'})
+
+
+def tutor_dashboard(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please log in to continue.')
+        return redirect('login')
+
+    if not is_tutor(request):
+        messages.error(request, 'Tutor dashboard is only available for tutor login.')
+        return redirect('dashboard')
+
+    tutor_courses = [
+        {'slug': slug, **COURSE_CATALOG[slug]}
+        for slug in TUTOR_COURSE_SLUGS
+        if slug in COURSE_CATALOG
+    ]
+    return render(
+        request,
+        'tutor_dashboard.html',
+        {
+            'active_page': 'tutor_dashboard',
+            'tutor_courses': tutor_courses,
+        },
+    )
 
 
 def add_video_lecture(request):
     if not request.user.is_authenticated:
         messages.error(request, 'Please log in to upload a lecture.')
         return redirect('login')
+
+    if not is_tutor(request):
+        messages.error(request, 'Only tutors can add video lectures.')
+        return redirect('dashboard')
 
     lecture_data = None
     if request.method == 'POST':
@@ -182,6 +222,43 @@ def add_video_lecture(request):
     )
 
 
+def add_live_session(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please log in to schedule a session.')
+        return redirect('login')
+
+    if not is_tutor(request):
+        messages.error(request, 'Only tutors can schedule live sessions.')
+        return redirect('dashboard')
+
+    session_data = None
+    if request.method == 'POST':
+        topic = request.POST.get('topic', '').strip()
+        course_name = request.POST.get('course_name', '').strip()
+        session_date = request.POST.get('session_date', '').strip()
+        session_time = request.POST.get('session_time', '').strip()
+        meet_link = request.POST.get('meet_link', '').strip()
+
+        session_data = {
+            'topic': topic,
+            'course_name': course_name,
+            'session_date': session_date,
+            'session_time': session_time,
+            'meet_link': meet_link,
+        }
+
+        if not all([topic, course_name, session_date, session_time, meet_link]):
+            messages.error(request, 'Please complete all session details before publishing.')
+        else:
+            messages.success(request, f'Live session "{topic}" has been published.')
+
+    return render(
+        request,
+        'add_live_session.html',
+        {'active_page': 'add_live_session', 'session_info': session_data},
+    )
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -189,18 +266,26 @@ def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
+        user_role = request.POST.get('user_role', '').strip().lower()
 
         if not email or not password:
             messages.error(request, 'Please enter both email and password.')
+            return render(request, 'login.html', {'active_page': 'login', 'email': email, 'user_role': user_role})
+
+        if user_role not in {'student', 'tutor'}:
+            messages.error(request, 'Please select whether you are logging in as Student or Tutor.')
             return render(request, 'login.html', {'active_page': 'login', 'email': email})
 
         user = authenticate(request, username=email, password=password)
         if user is None:
             messages.error(request, 'Invalid credentials. Please try again.')
-            return render(request, 'login.html', {'active_page': 'login', 'email': email})
+            return render(request, 'login.html', {'active_page': 'login', 'email': email, 'user_role': user_role})
 
         login(request, user)
+        request.session['user_role'] = user_role
         messages.success(request, f'Welcome back, {user.first_name or "Learner"}!')
+        if user_role == 'tutor':
+            return redirect('tutor_dashboard')
         return redirect('dashboard')
 
     return render(request, 'login.html', {'active_page': 'login'})
@@ -244,6 +329,7 @@ def register_view(request):
             last_name=last_name,
         )
         login(request, user)
+        request.session['user_role'] = 'student'
         messages.success(request, 'Account created successfully. Welcome to LearnSphere!')
         return redirect('dashboard')
 
