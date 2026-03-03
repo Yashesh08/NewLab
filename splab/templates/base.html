@@ -22,6 +22,13 @@
             {% if request.user.is_authenticated and request.user.is_staff %}
                 <a href="{% url 'admin_panel' %}" class="{% if active_page == 'admin_panel' %}active{% endif %}">Admin Panel</a>
             {% endif %}
+            {% if request.user.is_authenticated and not request.user.is_staff and request.user.groups.all|length > 0 %}
+                {% for group in request.user.groups.all %}
+                    {% if group.name == 'Instructor' %}
+                        <a href="{% url 'instructor_panel' %}" class="{% if active_page == 'instructor_panel' %}active{% endif %}">Instructor Panel</a>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
             {% if request.user.is_authenticated %}
                 <a href="{% url 'logout' %}">Logout</a>
             {% else %}
