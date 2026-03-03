@@ -61,6 +61,22 @@ def _send_notification_email(to_email, subject, message):
     )
 
 
+def _is_instructor(user):
+    if not user.is_authenticated:
+        return False
+    return user.groups.filter(name='Instructor').exists()
+
+
+def _get_user_role(user):
+    if not user.is_authenticated:
+        return 'guest'
+    if user.is_superuser or user.is_staff:
+        return 'admin'
+    if _is_instructor(user):
+        return 'instructor'
+    return 'user'
+
+
 def get_course(slug):
     course = Course.objects.filter(is_published=True).prefetch_related('instructors').get(slug=slug)
     return course
@@ -283,6 +299,7 @@ def dashboard(request):
 
     context = {
         'active_page': 'dashboard',
+        'user_role': _get_user_role(request.user),
         'learning_goal': 8,
         'completed_hours': round((average_progress / 100) * 8, 1),
         'goal_progress': average_progress,
@@ -310,7 +327,12 @@ def login_view(request):
             return render(request, 'login.html', {'active_page': 'login', 'email': email})
 
         login(request, user)
+        user_role = _get_user_role(user)
         messages.success(request, f'Welcome back, {user.first_name or "Learner"}!')
+        if user_role == 'admin':
+            return redirect('admin_panel')
+        if user_role == 'instructor':
+            return redirect('instructor_panel')
         return redirect('dashboard')
 
     return render(request, 'login.html', {'active_page': 'login'})
@@ -381,7 +403,7 @@ def admin_panel(request):
         messages.error(request, 'Please login as admin to access admin panel.')
         return redirect('login')
 
-    if not request.user.is_staff:
+    if not (request.user.is_staff or request.user.is_superuser):
         messages.error(request, 'Only admin users can access the admin panel.')
         return redirect('home')
 
@@ -403,6 +425,43 @@ def admin_panel(request):
         'recent_courses': recent_courses,
     }
     return render(request, 'admin_panel.html', context)
+
+
+def instructor_panel(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please login as instructor to access instructor panel.')
+        return redirect('login')
+
+    if not _is_instructor(request.user):
+        messages.error(request, 'Only instructor users can access the instructor panel.')
+        return redirect('home')
+
+    courses_taught = (
+        Course.objects
+        .filter(instructors__name__iexact=request.user.get_full_name())
+        .distinct()
+        .order_by('title')
+    )
+    if not courses_taught.exists():
+        courses_taught = Course.objects.filter(is_published=True).order_by('title')[:5]
+
+    course_rows = [
+        {
+            'title': course.title,
+            'category': course.category,
+            'level': course.get_level_display(),
+            'enrollment_count': course.enrollments.count(),
+        }
+        for course in courses_taught
+    ]
+
+    context = {
+        'active_page': 'instructor_panel',
+        'course_rows': course_rows,
+        'total_courses': len(course_rows),
+        'total_enrollments': sum(item['enrollment_count'] for item in course_rows),
+    }
+    return render(request, 'instructor_panel.html', context)
 
 def logout_view(request):
     if request.user.is_authenticated:
