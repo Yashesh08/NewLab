@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Create Assignment{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 760px; margin: 0 auto;">
+    <h1 class="section-title">Create Assignment</h1>
+    <p class="section-subtitle">Publish assignments so learners can submit their work on time.</p>
+
+    <form method="post" class="grid" style="gap: 14px;">
+        {% csrf_token %}
+        <label>
+            <strong>Assignment title</strong>
+            <input type="text" name="title" value="{{ assignment.title|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Course name</strong>
+            <input type="text" name="course_name" value="{{ assignment.course_name|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Due date</strong>
+            <input type="date" name="due_date" value="{{ assignment.due_date|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Maximum marks</strong>
+            <input type="number" min="1" name="max_marks" value="{{ assignment.max_marks|default:'' }}" required>
+        </label>
+
+        <label>
+            <strong>Instructions</strong>
+            <textarea name="instructions" rows="4" required>{{ assignment.instructions|default:'' }}</textarea>
+        </label>
+
+        <button class="button" type="submit">Create Assignment</button>
+    </form>
+</section>
+
+{% if recent_assignments %}
+<section class="card" style="max-width: 760px; margin: 16px auto 0;">
+    <h2 class="section-title" style="font-size: 1.25rem;">Recent Assignments</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Title</th>
+            <th>Course</th>
+            <th>Due Date</th>
+            <th>Marks</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in recent_assignments %}
+            <tr>
+                <td>{{ item.title }}</td>
+                <td>{{ item.course_name }}</td>
+                <td>{{ item.due_date }}</td>
+                <td>{{ item.max_marks }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+{% endblock %}
