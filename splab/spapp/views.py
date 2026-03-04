@@ -65,12 +65,22 @@ PURCHASED_COURSE_SLUGS = [
     'data-analytics-with-python',
 ]
 
+TUTOR_COURSE_SLUGS = [
+    'full-stack-javascript-bootcamp',
+    'react-for-intermediate-developers',
+    'data-analytics-with-python',
+]
+
 
 def get_course(slug):
     course = COURSE_CATALOG.get(slug)
     if not course:
         raise Http404('Course not found')
     return course
+
+
+def is_tutor(request):
+    return request.session.get('user_role') == 'tutor'
 
 
 def home(request):
@@ -150,6 +160,8 @@ def instructors(request):
 
 
 def dashboard(request):
+    if is_tutor(request):
+        return redirect('tutor_dashboard')
     return render(request, 'dashboard.html', {'active_page': 'dashboard'})
 
 
@@ -212,18 +224,26 @@ def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
+        user_role = request.POST.get('user_role', '').strip().lower()
 
         if not email or not password:
             messages.error(request, 'Please enter both email and password.')
+            return render(request, 'login.html', {'active_page': 'login', 'email': email, 'user_role': user_role})
+
+        if user_role not in {'student', 'tutor'}:
+            messages.error(request, 'Please select whether you are logging in as Student or Tutor.')
             return render(request, 'login.html', {'active_page': 'login', 'email': email})
 
         user = authenticate(request, username=email, password=password)
         if user is None:
             messages.error(request, 'Invalid credentials. Please try again.')
-            return render(request, 'login.html', {'active_page': 'login', 'email': email})
+            return render(request, 'login.html', {'active_page': 'login', 'email': email, 'user_role': user_role})
 
         login(request, user)
+        request.session['user_role'] = user_role
         messages.success(request, f'Welcome back, {user.first_name or "Learner"}!')
+        if user_role == 'tutor':
+            return redirect('tutor_dashboard')
         return redirect('dashboard')
 
     return render(request, 'login.html', {'active_page': 'login'})
@@ -267,6 +287,7 @@ def register_view(request):
             last_name=last_name,
         )
         login(request, user)
+        request.session['user_role'] = 'student'
         messages.success(request, 'Account created successfully. Welcome to LearnSphere!')
         return redirect('dashboard')
 
