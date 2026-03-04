@@ -5,7 +5,7 @@
 {% block content %}
 <section class="card" style="margin-bottom:16px;">
     <h1 class="section-title">Instructor Panel</h1>
-    <p class="section-subtitle">Manage and monitor your assigned courses.</p>
+    <p class="section-subtitle">Manage assigned courses, add materials, and publish tests for students.</p>
 
     <div class="grid grid-2">
         <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
@@ -28,6 +28,9 @@
                 <th>Category</th>
                 <th>Level</th>
                 <th>Enrollments</th>
+                <th>Materials</th>
+                <th>Tests</th>
+                <th>Manage</th>
             </tr>
         </thead>
         <tbody>
@@ -37,10 +40,13 @@
                 <td>{{ row.category }}</td>
                 <td>{{ row.level }}</td>
                 <td>{{ row.enrollment_count }}</td>
+                <td>{{ row.materials_count }}</td>
+                <td>{{ row.tests_count }}</td>
+                <td><a href="{% url 'manage_instructor_course' row.id %}" style="color:#4f46e5; font-weight:700;">Open</a></td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4">No courses mapped to your instructor profile yet.</td>
+                <td colspan="7">No courses mapped to your instructor profile yet.</td>
             </tr>
             {% endfor %}
         </tbody>
