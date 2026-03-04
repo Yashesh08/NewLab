@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Course{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>{% if is_edit %}Edit{% else %}Create{% endif %} Course</h2>
+  <form method="post" enctype="multipart/form-data" class="grid" style="margin-top:12px;">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Save Course</button>
+  </form>
+</section>
+{% endblock %}
