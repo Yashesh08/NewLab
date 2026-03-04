@@ -21,6 +21,56 @@
     </article>
 </section>
 
+<section class="grid grid-3" style="margin-bottom: 16px;">
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.05rem;">Lectures Added</h2>
+        <p class="section-subtitle" style="font-size:2rem; font-weight:700; color:#4f46e5;">{{ dashboard_stats.lectures_count }}</p>
+    </article>
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.05rem;">Live Sessions</h2>
+        <p class="section-subtitle" style="font-size:2rem; font-weight:700; color:#4f46e5;">{{ dashboard_stats.sessions_count }}</p>
+    </article>
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.05rem;">Assignments</h2>
+        <p class="section-subtitle" style="font-size:2rem; font-weight:700; color:#4f46e5;">{{ dashboard_stats.assignments_count }}</p>
+    </article>
+</section>
+
+<section class="card" style="margin-bottom: 16px;">
+    <h2 class="section-title" style="font-size:1.2rem;">Tutor Panel Actions</h2>
+    <div class="grid grid-3">
+        <a class="button" href="{% url 'add_video_lecture' %}" style="display:inline-block; text-decoration:none;">Upload Lecture</a>
+        <a class="button" href="{% url 'add_assignment' %}" style="display:inline-block; text-decoration:none;">Create Assignment</a>
+        <a class="button" href="{% url 'tutor_announcements' %}" style="display:inline-block; text-decoration:none;">Post Announcement</a>
+    </div>
+</section>
+
+<section class="card" style="margin-bottom: 16px;">
+    <h2 class="section-title" style="font-size:1.3rem;">Recent Tutor Activity</h2>
+    {% if recent_activity %}
+        <table>
+            <thead>
+            <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Course</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for activity in recent_activity %}
+                <tr>
+                    <td>{{ activity.type }}</td>
+                    <td>{{ activity.title }}</td>
+                    <td>{{ activity.course_name }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="section-subtitle">No tutor activity yet. Use the actions above to add your first update.</p>
+    {% endif %}
+</section>
+
 <section class="card">
     <h2 class="section-title" style="font-size:1.3rem;">Your Teaching Courses</h2>
     <table>

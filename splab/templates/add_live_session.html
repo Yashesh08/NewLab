@@ -47,4 +47,28 @@
     <p><strong>Link:</strong> <a href="{{ session_info.meet_link }}" target="_blank" rel="noopener noreferrer">{{ session_info.meet_link }}</a></p>
 </section>
 {% endif %}
+
+{% if upcoming_sessions %}
+<section class="card" style="max-width: 760px; margin: 16px auto 0;">
+    <h2 class="section-title" style="font-size: 1.15rem;">Upcoming Sessions</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Topic</th>
+            <th>Course</th>
+            <th>Schedule</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in upcoming_sessions %}
+            <tr>
+                <td>{{ item.topic }}</td>
+                <td>{{ item.course_name }}</td>
+                <td>{{ item.session_date }} {{ item.session_time }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
 {% endblock %}
