@@ -186,21 +186,32 @@
         }
     
 
-label {
-    display: grid;
-    gap: 8px;
-    color: #111827;
+
+.stat-card p {
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 
-input,
-textarea {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 0.95rem;
+.stat-card h2 {
+    font-size: 2rem;
+    color: var(--primary-dark);
 }
 
-textarea {
-    resize: vertical;
+.inline-form {
+    margin: 0;
+}
+
+.button-muted {
+    background: #334155;
+}
+
+.button-muted:hover {
+    background: #1f2937;
+}
+
+.table-note {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
 }
