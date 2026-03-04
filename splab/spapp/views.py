@@ -68,6 +68,23 @@ TUTOR_COURSE_SLUGS = [
 ]
 
 
+def get_tutor_workspace(request):
+    workspace = request.session.get('tutor_workspace')
+    if not workspace:
+        workspace = {
+            'lectures': [],
+            'sessions': [],
+            'assignments': [],
+            'announcements': [],
+        }
+    return workspace
+
+
+def save_tutor_workspace(request, workspace):
+    request.session['tutor_workspace'] = workspace
+    request.session.modified = True
+
+
 def get_course(slug):
     course = COURSE_CATALOG.get(slug)
     if not course:
@@ -175,12 +192,30 @@ def tutor_dashboard(request):
         for slug in TUTOR_COURSE_SLUGS
         if slug in COURSE_CATALOG
     ]
+
+    workspace = get_tutor_workspace(request)
+    dashboard_stats = {
+        'lectures_count': len(workspace['lectures']),
+        'sessions_count': len(workspace['sessions']),
+        'assignments_count': len(workspace['assignments']),
+        'announcements_count': len(workspace['announcements']),
+    }
+
+    recent_activity = (
+        [{'type': 'Lecture', 'title': item['title'], 'course_name': item['course_name']} for item in workspace['lectures']]
+        + [{'type': 'Live Session', 'title': item['topic'], 'course_name': item['course_name']} for item in workspace['sessions']]
+        + [{'type': 'Assignment', 'title': item['title'], 'course_name': item['course_name']} for item in workspace['assignments']]
+        + [{'type': 'Announcement', 'title': item['title'], 'course_name': item['course_name']} for item in workspace['announcements']]
+    )[::-1][:6]
+
     return render(
         request,
         'tutor_dashboard.html',
         {
             'active_page': 'tutor_dashboard',
             'tutor_courses': tutor_courses,
+            'dashboard_stats': dashboard_stats,
+            'recent_activity': recent_activity,
         },
     )
 
@@ -194,6 +229,7 @@ def add_video_lecture(request):
         messages.error(request, 'Only tutors can add video lectures.')
         return redirect('dashboard')
 
+    workspace = get_tutor_workspace(request)
     lecture_data = None
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
@@ -213,12 +249,18 @@ def add_video_lecture(request):
         if not all([title, course_name, video_url, duration, description]):
             messages.error(request, 'Please fill in all lecture details before submitting.')
         else:
+            workspace['lectures'].append(lecture_data)
+            save_tutor_workspace(request, workspace)
             messages.success(request, f'Lecture "{title}" has been added successfully.')
 
     return render(
         request,
         'add_video_lecture.html',
-        {'active_page': 'add_video_lecture', 'lecture': lecture_data},
+        {
+            'active_page': 'add_video_lecture',
+            'lecture': lecture_data,
+            'recent_lectures': workspace['lectures'][::-1][:5],
+        },
     )
 
 
@@ -231,6 +273,7 @@ def add_live_session(request):
         messages.error(request, 'Only tutors can schedule live sessions.')
         return redirect('dashboard')
 
+    workspace = get_tutor_workspace(request)
     session_data = None
     if request.method == 'POST':
         topic = request.POST.get('topic', '').strip()
@@ -250,12 +293,106 @@ def add_live_session(request):
         if not all([topic, course_name, session_date, session_time, meet_link]):
             messages.error(request, 'Please complete all session details before publishing.')
         else:
+            workspace['sessions'].append(session_data)
+            save_tutor_workspace(request, workspace)
             messages.success(request, f'Live session "{topic}" has been published.')
 
     return render(
         request,
         'add_live_session.html',
-        {'active_page': 'add_live_session', 'session_info': session_data},
+        {
+            'active_page': 'add_live_session',
+            'session_info': session_data,
+            'upcoming_sessions': workspace['sessions'][::-1][:5],
+        },
+    )
+
+
+def add_assignment(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please log in to create assignments.')
+        return redirect('login')
+
+    if not is_tutor(request):
+        messages.error(request, 'Only tutors can create assignments.')
+        return redirect('dashboard')
+
+    workspace = get_tutor_workspace(request)
+    assignment_data = None
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        course_name = request.POST.get('course_name', '').strip()
+        due_date = request.POST.get('due_date', '').strip()
+        max_marks = request.POST.get('max_marks', '').strip()
+        instructions = request.POST.get('instructions', '').strip()
+
+        assignment_data = {
+            'title': title,
+            'course_name': course_name,
+            'due_date': due_date,
+            'max_marks': max_marks,
+            'instructions': instructions,
+        }
+
+        if not all([title, course_name, due_date, max_marks, instructions]):
+            messages.error(request, 'Please complete all assignment details.')
+        else:
+            workspace['assignments'].append(assignment_data)
+            save_tutor_workspace(request, workspace)
+            messages.success(request, f'Assignment "{title}" has been created.')
+
+    return render(
+        request,
+        'add_assignment.html',
+        {
+            'active_page': 'add_assignment',
+            'assignment': assignment_data,
+            'recent_assignments': workspace['assignments'][::-1][:5],
+        },
+    )
+
+
+def tutor_announcements(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please log in to post announcements.')
+        return redirect('login')
+
+    if not is_tutor(request):
+        messages.error(request, 'Only tutors can post announcements.')
+        return redirect('dashboard')
+
+    workspace = get_tutor_workspace(request)
+    announcement_data = None
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        course_name = request.POST.get('course_name', '').strip()
+        message_text = request.POST.get('message', '').strip()
+        priority = request.POST.get('priority', '').strip()
+
+        announcement_data = {
+            'title': title,
+            'course_name': course_name,
+            'message': message_text,
+            'priority': priority,
+        }
+
+        if not all([title, course_name, message_text, priority]):
+            messages.error(request, 'Please complete all announcement details.')
+        else:
+            workspace['announcements'].append(announcement_data)
+            save_tutor_workspace(request, workspace)
+            messages.success(request, f'Announcement "{title}" has been posted.')
+
+    return render(
+        request,
+        'tutor_announcements.html',
+        {
+            'active_page': 'tutor_announcements',
+            'announcement': announcement_data,
+            'recent_announcements': workspace['announcements'][::-1][:5],
+        },
     )
 
 
