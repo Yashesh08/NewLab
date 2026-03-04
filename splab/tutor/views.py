@@ -76,7 +76,7 @@ def delete_course(request, id):
 @tutor_required
 def tutor_students(request):
     tutor = _get_tutor(request.user)
-    enrollments = Enrollment.objects.filter(course__tutor=tutor).select_related('student', 'course').order_by('-enrolled_at')
+    enrollments = Enrollment.objects.filter(course__tutor=tutor).select_related('student', 'course').order_by('-last_activity', '-enrolled_at')
     return render(request, 'tutor/students.html', {'enrollments': enrollments})
 
 
@@ -110,6 +110,11 @@ def tutor_assignments(request):
 @require_POST
 def submit_assignment(request, id):
     assignment = get_object_or_404(Assignment, id=id)
+
+    if not Enrollment.objects.filter(course=assignment.course, student=request.user).exists():
+        messages.error(request, 'You are not enrolled in this course.')
+        return redirect('dashboard')
+
     form = SubmissionForm(request.POST, request.FILES)
     if form.is_valid():
         Submission.objects.update_or_create(
