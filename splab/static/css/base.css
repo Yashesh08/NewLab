@@ -185,3 +185,33 @@
             }
         }
     
+
+
+.stat-card p {
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.stat-card h2 {
+    font-size: 2rem;
+    color: var(--primary-dark);
+}
+
+.inline-form {
+    margin: 0;
+}
+
+.button-muted {
+    background: #334155;
+}
+
+.button-muted:hover {
+    background: #1f2937;
+}
+
+.table-note {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
