@@ -48,4 +48,28 @@
     <p><strong>Description:</strong> {{ lecture.description }}</p>
 </section>
 {% endif %}
+
+{% if recent_lectures %}
+<section class="card" style="max-width: 760px; margin: 16px auto 0;">
+    <h2 class="section-title" style="font-size: 1.15rem;">Recently Added Lectures</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Title</th>
+            <th>Course</th>
+            <th>Duration</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in recent_lectures %}
+            <tr>
+                <td>{{ item.title }}</td>
+                <td>{{ item.course_name }}</td>
+                <td>{{ item.duration }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
 {% endblock %}
