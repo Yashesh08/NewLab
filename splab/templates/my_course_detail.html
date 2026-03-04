@@ -25,6 +25,8 @@
             <ol style="padding-left:18px; line-height:1.8;">
                 {% for item in module_outline %}
                     <li>{{ item }}</li>
+                {% empty %}
+                    <li>Course modules will be published soon.</li>
                 {% endfor %}
             </ol>
         </article>
@@ -36,6 +38,8 @@
                     <span>{{ lecture.title }}</span>
                     <strong>{{ lecture.duration }}</strong>
                 </div>
+            {% empty %}
+                <p class="muted">No video lectures uploaded yet.</p>
             {% endfor %}
         </article>
 
@@ -44,8 +48,35 @@
             <ul style="padding-left:18px; line-height:1.8;">
                 {% for note in notes %}
                     <li>{{ note }}</li>
+                {% empty %}
+                    <li>Notes are not available yet.</li>
                 {% endfor %}
             </ul>
+        </article>
+
+        <article class="panel">
+            <h2 style="margin-bottom:10px;">Tests & Attempts</h2>
+            {% for row in assignment_rows %}
+                <div style="border:1px solid #e5e7eb; border-radius:10px; padding:12px; margin-bottom:12px;">
+                    <h3 style="margin:0 0 6px 0;">{{ row.assignment.title }}</h3>
+                    <p style="margin:0 0 8px 0; color:#6b7280;">Due: {{ row.assignment.due_at|date:'M d, Y H:i' }} · Max Score: {{ row.assignment.max_score }}</p>
+                    <p style="margin:0 0 8px 0;">{{ row.assignment.instructions }}</p>
+                    <form method="post" action="{% url 'attempt_test' slug row.assignment.id %}" style="display:grid; gap:8px;">
+                        {% csrf_token %}
+                        <textarea name="answer_text" rows="3" placeholder="Write your attempt/answers">{% if row.attempt %}{{ row.attempt.remarks }}{% endif %}</textarea>
+                        <input name="submission_url" type="url" placeholder="Submission URL (optional)" value="{% if row.attempt %}{{ row.attempt.submission_url }}{% endif %}">
+                        <button class="button" type="submit">Submit / Update Attempt</button>
+                    </form>
+                    {% if row.attempt %}
+                        <p style="margin-top:8px; color:#15803d;">
+                            Attempt submitted (Status: {{ row.attempt.get_status_display }})
+                            {% if row.attempt.score %} · Score: {{ row.attempt.score }}{% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p class="muted">No tests published yet.</p>
+            {% endfor %}
         </article>
 
         <article class="panel">
@@ -55,6 +86,8 @@
                     <span>{{ meet.topic }}</span>
                     <strong>{{ meet.date }}</strong>
                 </div>
+            {% empty %}
+                <p class="muted">No live meets scheduled yet.</p>
             {% endfor %}
         </article>
     </div>
