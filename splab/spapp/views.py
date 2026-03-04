@@ -72,6 +72,23 @@ TUTOR_COURSE_SLUGS = [
 ]
 
 
+def get_tutor_workspace(request):
+    workspace = request.session.get('tutor_workspace')
+    if not workspace:
+        workspace = {
+            'lectures': [],
+            'sessions': [],
+            'assignments': [],
+            'announcements': [],
+        }
+    return workspace
+
+
+def save_tutor_workspace(request, workspace):
+    request.session['tutor_workspace'] = workspace
+    request.session.modified = True
+
+
 def get_course(slug):
     course = COURSE_CATALOG.get(slug)
     if not course:
