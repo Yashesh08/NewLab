@@ -1,8 +1,12 @@
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.db.models import Count
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .models import Assignment, Course, Enrollment, LiveMeet
 
 COURSE_CATALOG = {
     'full-stack-javascript-bootcamp': {
@@ -11,7 +15,7 @@ COURSE_CATALOG = {
         'level': 'Beginner',
         'duration': '10 weeks',
         'price': '$49',
-        'description': 'Learn HTML, CSS, JavaScript, Node.js, and MongoDB by building complete end-to-end applications.'
+        'description': 'Learn HTML, CSS, JavaScript, Node.js, and MongoDB by building complete end-to-end applications.',
     },
     'react-for-intermediate-developers': {
         'title': 'React for Intermediate Developers',
@@ -19,7 +23,7 @@ COURSE_CATALOG = {
         'level': 'Intermediate',
         'duration': '6 weeks',
         'price': '$59',
-        'description': 'Master hooks, routing, performance optimization, and reusable component architecture in real projects.'
+        'description': 'Master hooks, routing, performance optimization, and reusable component architecture in real projects.',
     },
     'figma-ui-design-workshop': {
         'title': 'Figma UI Design Workshop',
@@ -27,7 +31,7 @@ COURSE_CATALOG = {
         'level': 'Beginner',
         'duration': '4 weeks',
         'price': '$39',
-        'description': 'Build polished user interfaces in Figma with practical workflows, components, and design handoff.'
+        'description': 'Build polished user interfaces in Figma with practical workflows, components, and design handoff.',
     },
     'advanced-product-design-systems': {
         'title': 'Advanced Product Design Systems',
@@ -35,7 +39,7 @@ COURSE_CATALOG = {
         'level': 'Advanced',
         'duration': '8 weeks',
         'price': '$69',
-        'description': 'Create scalable design systems and governance practices for high-growth product teams.'
+        'description': 'Create scalable design systems and governance practices for high-growth product teams.',
     },
     'growth-marketing-seo': {
         'title': 'Growth Marketing & SEO',
@@ -43,7 +47,7 @@ COURSE_CATALOG = {
         'level': 'Intermediate',
         'duration': '5 weeks',
         'price': '$44',
-        'description': 'Learn acquisition channels, SEO fundamentals, and conversion experiments to grow product adoption.'
+        'description': 'Learn acquisition channels, SEO fundamentals, and conversion experiments to grow product adoption.',
     },
     'data-analytics-with-python': {
         'title': 'Data Analytics with Python',
@@ -51,7 +55,7 @@ COURSE_CATALOG = {
         'level': 'Beginner',
         'duration': '7 weeks',
         'price': '$54',
-        'description': 'Analyze and visualize datasets using Python, pandas, and practical business intelligence workflows.'
+        'description': 'Analyze and visualize datasets using Python, pandas, and practical business intelligence workflows.',
     },
 }
 
@@ -161,102 +165,56 @@ def dashboard(request):
     return render(request, 'dashboard.html', {'active_page': 'dashboard'})
 
 
-def tutor_dashboard(request):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please log in to continue.')
-        return redirect('login')
+def _handle_admin_panel_action(request):
+    action = request.POST.get('action')
 
-    if not is_tutor(request):
-        messages.error(request, 'Tutor dashboard is only available for tutor login.')
-        return redirect('dashboard')
+    if action in {'publish_course', 'unpublish_course'}:
+        course = get_object_or_404(Course, id=request.POST.get('course_id'))
+        course.is_published = action == 'publish_course'
+        course.save(update_fields=['is_published', 'updated_at'])
+        status_label = 'published' if course.is_published else 'unpublished'
+        messages.success(request, f'Course "{course.title}" is now {status_label}.')
 
-    tutor_courses = [
-        {'slug': slug, **COURSE_CATALOG[slug]}
-        for slug in TUTOR_COURSE_SLUGS
-        if slug in COURSE_CATALOG
-    ]
-    return render(
-        request,
-        'tutor_dashboard.html',
-        {
-            'active_page': 'tutor_dashboard',
-            'tutor_courses': tutor_courses,
+    elif action in {'promote_instructor', 'revoke_instructor'}:
+        user = get_object_or_404(User, id=request.POST.get('user_id'))
+        if user == request.user and action == 'revoke_instructor':
+            messages.error(request, 'You cannot revoke your own instructor access from this panel.')
+            return
+
+        user.is_staff = action == 'promote_instructor'
+        user.save(update_fields=['is_staff'])
+        role_label = 'Instructor' if user.is_staff else 'Student'
+        messages.success(request, f'{user.get_full_name() or user.username} is now marked as {role_label}.')
+
+
+@staff_member_required(login_url='login')
+def admin_panel(request):
+    if request.method == 'POST':
+        _handle_admin_panel_action(request)
+        return redirect('admin_panel')
+
+    courses_with_enrollments = Course.objects.annotate(total_enrollments=Count('enrollments')).order_by('title')
+    instructors_list = User.objects.filter(is_staff=True).order_by('first_name', 'last_name', 'username')
+    students_list = User.objects.filter(is_staff=False).annotate(total_enrollments=Count('enrollments')).order_by(
+        '-date_joined'
+    )
+
+    context = {
+        'active_page': 'admin_panel',
+        'stats': {
+            'total_courses': courses_with_enrollments.count(),
+            'published_courses': courses_with_enrollments.filter(is_published=True).count(),
+            'total_enrollments': Enrollment.objects.count(),
+            'active_students': students_list.count(),
+            'total_instructors': instructors_list.count(),
+            'upcoming_live_meets': LiveMeet.objects.count(),
+            'total_assignments': Assignment.objects.count(),
         },
-    )
-
-
-def add_video_lecture(request):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please log in to upload a lecture.')
-        return redirect('login')
-
-    if not is_tutor(request):
-        messages.error(request, 'Only tutors can add video lectures.')
-        return redirect('dashboard')
-
-    lecture_data = None
-    if request.method == 'POST':
-        title = request.POST.get('title', '').strip()
-        course_name = request.POST.get('course_name', '').strip()
-        video_url = request.POST.get('video_url', '').strip()
-        duration = request.POST.get('duration', '').strip()
-        description = request.POST.get('description', '').strip()
-
-        lecture_data = {
-            'title': title,
-            'course_name': course_name,
-            'video_url': video_url,
-            'duration': duration,
-            'description': description,
-        }
-
-        if not all([title, course_name, video_url, duration, description]):
-            messages.error(request, 'Please fill in all lecture details before submitting.')
-        else:
-            messages.success(request, f'Lecture "{title}" has been added successfully.')
-
-    return render(
-        request,
-        'add_video_lecture.html',
-        {'active_page': 'add_video_lecture', 'lecture': lecture_data},
-    )
-
-
-def add_live_session(request):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Please log in to schedule a session.')
-        return redirect('login')
-
-    if not is_tutor(request):
-        messages.error(request, 'Only tutors can schedule live sessions.')
-        return redirect('dashboard')
-
-    session_data = None
-    if request.method == 'POST':
-        topic = request.POST.get('topic', '').strip()
-        course_name = request.POST.get('course_name', '').strip()
-        session_date = request.POST.get('session_date', '').strip()
-        session_time = request.POST.get('session_time', '').strip()
-        meet_link = request.POST.get('meet_link', '').strip()
-
-        session_data = {
-            'topic': topic,
-            'course_name': course_name,
-            'session_date': session_date,
-            'session_time': session_time,
-            'meet_link': meet_link,
-        }
-
-        if not all([topic, course_name, session_date, session_time, meet_link]):
-            messages.error(request, 'Please complete all session details before publishing.')
-        else:
-            messages.success(request, f'Live session "{topic}" has been published.')
-
-    return render(
-        request,
-        'add_live_session.html',
-        {'active_page': 'add_live_session', 'session_info': session_data},
-    )
+        'courses': courses_with_enrollments,
+        'instructors': instructors_list,
+        'students': students_list[:12],
+    }
+    return render(request, 'admin_panel.html', context)
 
 
 def login_view(request):
