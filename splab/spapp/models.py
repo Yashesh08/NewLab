@@ -10,6 +10,19 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class Instructor(TimeStampedModel):
+    name = models.CharField(max_length=120)
+    title = models.CharField(max_length=140)
+    bio = models.TextField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Course(TimeStampedModel):
     class Level(models.TextChoices):
         BEGINNER = 'beginner', 'Beginner'
@@ -25,6 +38,7 @@ class Course(TimeStampedModel):
     duration_weeks = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     is_published = models.BooleanField(default=True)
+    instructors = models.ManyToManyField(Instructor, blank=True, related_name='courses')
 
     class Meta:
         ordering = ['title']

@@ -1,69 +1,58 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Course, Enrollment
 
-
-class AdminPanelViewTests(TestCase):
+class RoleAccessTests(TestCase):
     def setUp(self):
-        self.staff_user = User.objects.create_user(
-            username='admin@learnsphere.com',
-            email='admin@learnsphere.com',
-            password='StrongPass123!',
+        self.password = 'testpass123'
+        self.admin_user = User.objects.create_user(
+            username='admin@example.com',
+            email='admin@example.com',
+            password=self.password,
             is_staff=True,
         )
-        self.student_user = User.objects.create_user(
-            username='student@learnsphere.com',
-            email='student@learnsphere.com',
-            password='StrongPass123!',
-            first_name='Student',
+        self.instructor_user = User.objects.create_user(
+            username='inst@example.com',
+            email='inst@example.com',
+            password=self.password,
+            first_name='Inst',
+            last_name='Ructor',
         )
-        self.course = Course.objects.create(
-            title='Python Essentials',
-            slug='python-essentials',
-            category='Development',
-            short_description='Intro to python',
-            description='Longer description',
-            level=Course.Level.BEGINNER,
-            duration_weeks=4,
-            price='29.00',
-            is_published=True,
+        self.regular_user = User.objects.create_user(
+            username='user@example.com',
+            email='user@example.com',
+            password=self.password,
         )
-        Enrollment.objects.create(user=self.student_user, course=self.course, status=Enrollment.Status.ACTIVE)
+        instructors_group, _ = Group.objects.get_or_create(name='Instructor')
+        self.instructor_user.groups.add(instructors_group)
 
-    def test_admin_panel_redirects_non_staff_user(self):
-        self.client.login(username='student@learnsphere.com', password='StrongPass123!')
-        response = self.client.get(reverse('admin_panel'))
-        self.assertEqual(response.status_code, 302)
-
-    def test_admin_panel_access_for_staff_user(self):
-        self.client.login(username='admin@learnsphere.com', password='StrongPass123!')
-        response = self.client.get(reverse('admin_panel'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'admin_panel.html')
-        self.assertEqual(response.context['stats']['total_courses'], 1)
-        self.assertEqual(response.context['stats']['total_enrollments'], 1)
-        self.assertEqual(response.context['stats']['total_instructors'], 1)
-
-    def test_admin_panel_can_unpublish_course(self):
-        self.client.login(username='admin@learnsphere.com', password='StrongPass123!')
+    def test_admin_user_redirects_to_admin_panel_after_login(self):
         response = self.client.post(
-            reverse('admin_panel'),
-            {'action': 'unpublish_course', 'course_id': self.course.id},
-            follow=True,
+            reverse('login'),
+            {'email': self.admin_user.username, 'password': self.password},
         )
-        self.course.refresh_from_db()
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(self.course.is_published)
+        self.assertRedirects(response, reverse('admin_panel'))
 
-    def test_admin_panel_can_promote_student_to_instructor(self):
-        self.client.login(username='admin@learnsphere.com', password='StrongPass123!')
+    def test_instructor_user_redirects_to_instructor_panel_after_login(self):
         response = self.client.post(
-            reverse('admin_panel'),
-            {'action': 'promote_instructor', 'user_id': self.student_user.id},
-            follow=True,
+            reverse('login'),
+            {'email': self.instructor_user.username, 'password': self.password},
         )
-        self.student_user.refresh_from_db()
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(self.student_user.is_staff)
+        self.assertRedirects(response, reverse('instructor_panel'))
+
+    def test_regular_user_redirects_to_dashboard_after_login(self):
+        response = self.client.post(
+            reverse('login'),
+            {'email': self.regular_user.username, 'password': self.password},
+        )
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_regular_user_cannot_access_admin_or_instructor_panel(self):
+        self.client.login(username=self.regular_user.username, password=self.password)
+
+        admin_response = self.client.get(reverse('admin_panel'))
+        instructor_response = self.client.get(reverse('instructor_panel'))
+
+        self.assertRedirects(admin_response, reverse('home'))
+        self.assertRedirects(instructor_response, reverse('home'))

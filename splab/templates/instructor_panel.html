@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Instructor Panel{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom:16px;">
+    <h1 class="section-title">Instructor Panel</h1>
+    <p class="section-subtitle">Manage assigned courses, add materials, and publish tests for students.</p>
+
+    <div class="grid grid-2">
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Courses Assigned</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_courses }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Enrollments</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_enrollments }}</strong>
+        </article>
+    </div>
+</section>
+
+<section class="card">
+    <h2 class="section-title" style="font-size:1.3rem;">Courses Overview</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Category</th>
+                <th>Level</th>
+                <th>Enrollments</th>
+                <th>Materials</th>
+                <th>Tests</th>
+                <th>Manage</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in course_rows %}
+            <tr>
+                <td>{{ row.title }}</td>
+                <td>{{ row.category }}</td>
+                <td>{{ row.level }}</td>
+                <td>{{ row.enrollment_count }}</td>
+                <td>{{ row.materials_count }}</td>
+                <td>{{ row.tests_count }}</td>
+                <td><a href="{% url 'manage_instructor_course' row.id %}" style="color:#4f46e5; font-weight:700;">Open</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">No courses mapped to your instructor profile yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
