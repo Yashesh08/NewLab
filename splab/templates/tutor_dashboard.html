@@ -1,99 +1,24 @@
 {% extends 'base.html' %}
-
-{% block title %}LearnSphere - Tutor Dashboard{% endblock %}
-
+{% block title %}Tutor Dashboard{% endblock %}
 {% block content %}
-<section class="grid grid-3" style="margin-bottom: 16px;">
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.15rem;">Courses Taught</h2>
-        <p class="section-subtitle">{{ tutor_courses|length }} active courses managed by you.</p>
-        <span class="pill success">Tutor Mode</span>
-    </article>
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.15rem;">Content Actions</h2>
-        <p class="section-subtitle">Upload new lessons and keep students updated weekly.</p>
-        <a class="button" href="{% url 'add_video_lecture' %}" style="display:inline-block; text-decoration:none;">Add Video Lecture</a>
-    </article>
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.15rem;">Live Support</h2>
-        <p class="section-subtitle">Run doubt-solving sessions and mentorship calls.</p>
-        <a class="button" href="{% url 'add_live_session' %}" style="display:inline-block; text-decoration:none;">Schedule Session</a>
-    </article>
+<section class="grid grid-3">
+  <article class="card"><h3>Total Courses</h3><p class="kpi">{{ dashboard_stats.total_courses }}</p></article>
+  <article class="card"><h3>Total Students</h3><p class="kpi">{{ dashboard_stats.total_students }}</p></article>
+  <article class="card"><h3>Active Enrollments</h3><p class="kpi">{{ dashboard_stats.active_enrollments }}</p></article>
+  <article class="card"><h3>Pending Assignments</h3><p class="kpi">{{ dashboard_stats.pending_assignments }}</p></article>
+  <article class="card"><h3>Average Rating</h3><p class="kpi">{{ dashboard_stats.course_rating_avg }}</p></article>
 </section>
 
-<section class="grid grid-3" style="margin-bottom: 16px;">
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.05rem;">Lectures Added</h2>
-        <p class="section-subtitle" style="font-size:2rem; font-weight:700; color:#4f46e5;">{{ dashboard_stats.lectures_count }}</p>
-    </article>
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.05rem;">Live Sessions</h2>
-        <p class="section-subtitle" style="font-size:2rem; font-weight:700; color:#4f46e5;">{{ dashboard_stats.sessions_count }}</p>
-    </article>
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.05rem;">Assignments</h2>
-        <p class="section-subtitle" style="font-size:2rem; font-weight:700; color:#4f46e5;">{{ dashboard_stats.assignments_count }}</p>
-    </article>
+<section class="card" style="margin-top:16px;">
+    <h3>Recent Enrollments</h3>
+    <table><thead><tr><th>Student</th><th>Course</th><th>Status</th></tr></thead><tbody>
+    {% for item in recent_enrollments %}<tr><td>{{ item.student.get_full_name|default:item.student.username }}</td><td>{{ item.course.title }}</td><td>{{ item.status }}</td></tr>{% empty %}<tr><td colspan="3">No enrollments yet</td></tr>{% endfor %}
+    </tbody></table>
 </section>
-
-<section class="card" style="margin-bottom: 16px;">
-    <h2 class="section-title" style="font-size:1.2rem;">Tutor Panel Actions</h2>
-    <div class="grid grid-3">
-        <a class="button" href="{% url 'add_video_lecture' %}" style="display:inline-block; text-decoration:none;">Upload Lecture</a>
-        <a class="button" href="{% url 'add_assignment' %}" style="display:inline-block; text-decoration:none;">Create Assignment</a>
-        <a class="button" href="{% url 'tutor_announcements' %}" style="display:inline-block; text-decoration:none;">Post Announcement</a>
-    </div>
-</section>
-
-<section class="card" style="margin-bottom: 16px;">
-    <h2 class="section-title" style="font-size:1.3rem;">Recent Tutor Activity</h2>
-    {% if recent_activity %}
-        <table>
-            <thead>
-            <tr>
-                <th>Type</th>
-                <th>Title</th>
-                <th>Course</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for activity in recent_activity %}
-                <tr>
-                    <td>{{ activity.type }}</td>
-                    <td>{{ activity.title }}</td>
-                    <td>{{ activity.course_name }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p class="section-subtitle">No tutor activity yet. Use the actions above to add your first update.</p>
-    {% endif %}
-</section>
-
-<section class="card">
-    <h2 class="section-title" style="font-size:1.3rem;">Your Teaching Courses</h2>
-    <table>
-        <thead>
-        <tr>
-            <th>Course</th>
-            <th>Category</th>
-            <th>Level</th>
-            <th>Duration</th>
-            <th>Action</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for course in tutor_courses %}
-            <tr>
-                <td>{{ course.title }}</td>
-                <td>{{ course.category }}</td>
-                <td>{{ course.level }}</td>
-                <td>{{ course.duration }}</td>
-                <td><a href="{% url 'add_video_lecture' %}" style="font-weight:600; color:#4f46e5; text-decoration:none;">Add Lecture</a></td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<section class="card" style="margin-top:16px;">
+    <h3>Latest Submissions</h3>
+    <table><thead><tr><th>Student</th><th>Assignment</th><th>Grade</th></tr></thead><tbody>
+    {% for item in latest_submissions %}<tr><td>{{ item.student.get_full_name|default:item.student.username }}</td><td>{{ item.assignment.title }}</td><td>{{ item.grade|default:'Pending' }}</td></tr>{% empty %}<tr><td colspan="3">No submissions yet</td></tr>{% endfor %}
+    </tbody></table>
 </section>
 {% endblock %}
