@@ -1,55 +1,58 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
 
 
-class TutorRoleFlowTests(TestCase):
+class RoleAccessTests(TestCase):
     def setUp(self):
-        self.email = 'mentor@example.com'
-        self.password = 'StrongPass123'
-        self.user = User.objects.create_user(
-            username=self.email,
-            email=self.email,
+        self.password = 'testpass123'
+        self.admin_user = User.objects.create_user(
+            username='admin@example.com',
+            email='admin@example.com',
             password=self.password,
-            first_name='Mentor',
+            is_staff=True,
         )
+        self.instructor_user = User.objects.create_user(
+            username='inst@example.com',
+            email='inst@example.com',
+            password=self.password,
+            first_name='Inst',
+            last_name='Ructor',
+        )
+        self.regular_user = User.objects.create_user(
+            username='user@example.com',
+            email='user@example.com',
+            password=self.password,
+        )
+        instructors_group, _ = Group.objects.get_or_create(name='Instructor')
+        self.instructor_user.groups.add(instructors_group)
 
-    def test_tutor_login_redirects_to_tutor_dashboard(self):
+    def test_admin_user_redirects_to_admin_panel_after_login(self):
         response = self.client.post(
             reverse('login'),
-            {
-                'email': self.email,
-                'password': self.password,
-                'user_role': 'tutor',
-            },
+            {'email': self.admin_user.username, 'password': self.password},
         )
+        self.assertRedirects(response, reverse('admin_panel'))
 
-        self.assertRedirects(response, reverse('tutor_dashboard'))
-        session = self.client.session
-        self.assertEqual(session.get('user_role'), 'tutor')
-
-    def test_student_cannot_open_tutor_pages(self):
-        self.client.post(
+    def test_instructor_user_redirects_to_instructor_panel_after_login(self):
+        response = self.client.post(
             reverse('login'),
-            {
-                'email': self.email,
-                'password': self.password,
-                'user_role': 'student',
-            },
+            {'email': self.instructor_user.username, 'password': self.password},
         )
+        self.assertRedirects(response, reverse('instructor_panel'))
 
-        response = self.client.get(reverse('add_video_lecture'))
+    def test_regular_user_redirects_to_dashboard_after_login(self):
+        response = self.client.post(
+            reverse('login'),
+            {'email': self.regular_user.username, 'password': self.password},
+        )
         self.assertRedirects(response, reverse('dashboard'))
 
-    def test_tutor_can_open_live_session_page(self):
-        self.client.post(
-            reverse('login'),
-            {
-                'email': self.email,
-                'password': self.password,
-                'user_role': 'tutor',
-            },
-        )
+    def test_regular_user_cannot_access_admin_or_instructor_panel(self):
+        self.client.login(username=self.regular_user.username, password=self.password)
 
-        response = self.client.get(reverse('add_live_session'))
-        self.assertEqual(response.status_code, 200)
+        admin_response = self.client.get(reverse('admin_panel'))
+        instructor_response = self.client.get(reverse('instructor_panel'))
+
+        self.assertRedirects(admin_response, reverse('home'))
+        self.assertRedirects(instructor_response, reverse('home'))

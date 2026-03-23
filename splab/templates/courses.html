@@ -22,6 +22,10 @@
                 </div>
                 <a class="button" href="{% url 'my_course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Open Course</a>
             </article>
+        {% empty %}
+            <p class="muted">No purchased courses yet. Enroll in a course to see it here.</p>
+        {% empty %}
+            <p class="muted">No published courses found.</p>
         {% endfor %}
     </div>
 </section>

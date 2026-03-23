@@ -2,7 +2,8 @@
     .auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .auth-form { display: grid; gap: 12px; }
     .auth-form label { font-weight: 600; color: #374151; }
-    .auth-form input {
+    .auth-form input,
+    .auth-form select {
         width: 100%;
         padding: 11px 12px;
         border: 1px solid #d1d5db;

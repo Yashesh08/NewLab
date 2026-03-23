@@ -7,6 +7,8 @@
     <title>{% block title %}LearnSphere{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     {% block extra_css %}{% endblock %}
+
+    
 </head>
 <body>
 <div class="container">
@@ -16,16 +18,18 @@
             <a href="{% url 'home' %}" class="{% if active_page == 'home' %}active{% endif %}">Home</a>
             <a href="{% url 'courses' %}" class="{% if active_page == 'courses' %}active{% endif %}">Courses</a>
             <a href="{% url 'instructors' %}" class="{% if active_page == 'instructors' %}active{% endif %}">Instructors</a>
-            {% if request.user.is_authenticated and request.session.user_role == 'tutor' %}
-                <a href="{% url 'tutor_dashboard' %}" class="{% if active_page == 'tutor_dashboard' %}active{% endif %}">Tutor Dashboard</a>
-                <a href="{% url 'tutor_courses' %}" class="{% if active_page == 'tutor_courses' %}active{% endif %}">My Courses</a>
-                <a href="{% url 'tutor_students' %}" class="{% if active_page == 'tutor_students' %}active{% endif %}">Students</a>
-                <a href="{% url 'tutor_assignments' %}" class="{% if active_page == 'tutor_assignments' %}active{% endif %}">Assignments</a>
-                <a href="{% url 'tutor_analytics' %}" class="{% if active_page == 'tutor_analytics' %}active{% endif %}">Analytics</a>
-                <a href="{% url 'tutor_profile' %}" class="{% if active_page == 'tutor_profile' %}active{% endif %}">Profile</a>
-                <a href="{% url 'logout' %}">Logout</a>
-            {% elif request.user.is_authenticated %}
-                <a href="{% url 'dashboard' %}" class="{% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'dashboard' %}" class="{% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+            {% if request.user.is_authenticated and request.user.is_staff %}
+                <a href="{% url 'admin_panel' %}" class="{% if active_page == 'admin_panel' %}active{% endif %}">Admin Panel</a>
+            {% endif %}
+            {% if request.user.is_authenticated and not request.user.is_staff and request.user.groups.all|length > 0 %}
+                {% for group in request.user.groups.all %}
+                    {% if group.name == 'Instructor' %}
+                        <a href="{% url 'instructor_panel' %}" class="{% if active_page == 'instructor_panel' %}active{% endif %}">Instructor Panel</a>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if request.user.is_authenticated %}
                 <a href="{% url 'logout' %}">Logout</a>
             {% else %}
                 <a href="{% url 'login' %}" class="{% if active_page == 'login' %}active{% endif %}">Login</a>
