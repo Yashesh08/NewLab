@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404, redirect, render
@@ -6,7 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .decorators import tutor_required
-from .forms import AssignmentForm, CourseForm, LessonForm, SubmissionGradeForm, TutorProfileForm
+from .forms import AssignmentForm, CourseForm, LessonForm, SubmissionForm, SubmissionGradeForm, TutorProfileForm
 from .models import Assignment, Course, Enrollment, Submission, Tutor
 
 
@@ -75,7 +76,7 @@ def delete_course(request, id):
 @tutor_required
 def tutor_students(request):
     tutor = _get_tutor(request.user)
-    enrollments = Enrollment.objects.filter(course__tutor=tutor).select_related('student', 'course')
+    enrollments = Enrollment.objects.filter(course__tutor=tutor).select_related('student', 'course').order_by('-last_activity', '-enrolled_at')
     return render(request, 'tutor/students.html', {'enrollments': enrollments})
 
 
@@ -105,6 +106,29 @@ def tutor_assignments(request):
     )
 
 
+@login_required
+@require_POST
+def submit_assignment(request, id):
+    assignment = get_object_or_404(Assignment, id=id)
+
+    if not Enrollment.objects.filter(course=assignment.course, student=request.user).exists():
+        messages.error(request, 'You are not enrolled in this course.')
+        return redirect('dashboard')
+
+    form = SubmissionForm(request.POST, request.FILES)
+    if form.is_valid():
+        Submission.objects.update_or_create(
+            assignment=assignment,
+            student=request.user,
+            defaults={'file': form.cleaned_data['file']},
+        )
+        messages.success(request, 'Assignment submitted successfully.')
+    else:
+        messages.error(request, 'Please upload a valid submission file.')
+
+    return redirect('dashboard')
+
+
 @tutor_required
 @require_POST
 def grade_submission(request, id):
@@ -131,18 +155,21 @@ def tutor_analytics(request):
     )
     month_map = {i: 0 for i in range(1, 13)}
     for row in monthly:
-        month_map[row['month']] = row['total']
+        if row['month']:
+            month_map[row['month']] = row['total']
 
     assignments = Assignment.objects.filter(course__tutor=tutor)
     submissions_count = Submission.objects.filter(assignment__in=assignments).count()
-    completion_rate = Enrollment.objects.filter(course__tutor=tutor, status=Enrollment.Status.COMPLETED).count()
+    completion_count = Enrollment.objects.filter(course__tutor=tutor, status=Enrollment.Status.COMPLETED).count()
     enroll_count = Enrollment.objects.filter(course__tutor=tutor).count()
+    completion_rate = round((completion_count / enroll_count) * 100, 2) if enroll_count else 0
 
     context = {
         'month_labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         'monthly_enrollments': [month_map[i] for i in range(1, 13)],
         'assignment_submissions': submissions_count,
-        'course_completion_rate': round((completion_rate / enroll_count) * 100, 2) if enroll_count else 0,
+        'course_completion_rate': completion_rate,
+        'completion_remaining': max(0, 100 - completion_rate),
     }
     return render(request, 'tutor/analytics.html', context)
 
