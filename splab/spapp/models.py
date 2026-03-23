@@ -62,6 +62,7 @@ class Course(TimeStampedModel):
     duration_weeks = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     is_published = models.BooleanField(default=True)
+    instructors = models.ManyToManyField(Instructor, blank=True, related_name='courses')
 
     class Meta:
         ordering = ['-created_at']

@@ -1,36 +1,11 @@
-.auth-wrap { max-width: 520px; margin: 0 auto; }
-.auth-form { display: grid; gap: 12px; }
-.auth-form label { font-weight: 600; color: #374151; }
-.auth-form input {
-    width: 100%;
-    padding: 11px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    font-size: 0.95rem;
-}
-.auth-meta { color: #6b7280; font-size: 0.92rem; }
-
-.role-selector {
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    padding: 10px 12px;
-    display: flex;
-    gap: 16px;
-}
-
-.role-selector legend {
-    font-weight: 700;
-    padding: 0 6px;
-}
-
-.role-selector label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-}
-
-.role-selector input {
-    width: auto;
-    margin: 0;
-}
+    .auth-wrap { max-width: 520px; margin: 0 auto; }
+    .auth-form { display: grid; gap: 12px; }
+    .auth-form label { font-weight: 600; color: #374151; }
+    .auth-form input {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 0.95rem;
+    }
+    .auth-meta { color: #6b7280; font-size: 0.92rem; }

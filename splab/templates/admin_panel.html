@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Admin Panel{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom:16px;">
+    <h1 class="section-title">Admin Panel</h1>
+    <p class="section-subtitle">This area is restricted to admin accounts only.</p>
+
+    <div class="grid grid-2">
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Users</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_users }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Courses</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_courses }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Total Enrollments</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ total_enrollments }}</strong>
+        </article>
+        <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+            <p style="color:#6b7280;">Active Enrollments</p>
+            <strong style="font-size:1.5rem; color:#3730a3;">{{ active_enrollments }}</strong>
+        </article>
+    </div>
+</section>
+
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title" style="font-size:1.2rem;">Add Course + Appoint Instructor</h2>
+    <form method="post" class="auth-form" style="display:grid; gap:10px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_course">
+        <input name="title" type="text" placeholder="Course title" required>
+        <div class="grid grid-2">
+            <input name="category" type="text" placeholder="Category" required>
+            <select name="level" required>
+                {% for value, label in course_levels %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <textarea name="short_description" rows="2" placeholder="Short description" required></textarea>
+        <textarea name="description" rows="3" placeholder="Full description (optional)"></textarea>
+        <div class="grid grid-2">
+            <input name="duration_weeks" type="number" min="1" value="4" required>
+            <input name="price" type="number" min="0" step="0.01" value="0" required>
+        </div>
+        <label style="font-weight:600;">Assign Instructors</label>
+        <select name="instructor_ids" multiple style="min-height:110px;">
+            {% for instructor in instructors %}
+                <option value="{{ instructor.id }}">{{ instructor.name }} — {{ instructor.title }}</option>
+            {% endfor %}
+        </select>
+        <small style="color:#6b7280;">Hold Ctrl/Cmd to select multiple instructors.</small>
+        <button class="button" type="submit">Create Course</button>
+    </form>
+</section>
+
+<section class="grid grid-2">
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Recent Users</h2>
+        <ul style="padding-left:18px; line-height:1.9;">
+            {% for user in recent_users %}
+                <li>{{ user.get_full_name|default:user.username }} ({{ user.email }})</li>
+            {% empty %}
+                <li>No users found.</li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.2rem;">Recently Added Courses</h2>
+        <ul style="padding-left:18px; line-height:1.9;">
+            {% for course in recent_courses %}
+                <li>{{ course.title }} • {{ course.category }}</li>
+            {% empty %}
+                <li>No courses found.</li>
+            {% endfor %}
+        </ul>
+    </article>
+</section>
+{% endblock %}

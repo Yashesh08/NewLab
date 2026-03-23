@@ -27,7 +27,14 @@
         <h2 style="margin-bottom:6px;">Enrollment & Pricing</h2>
         <p style="color:#6b7280; margin-bottom:8px;">One-time payment includes full access, projects, and downloadable resources.</p>
         <p style="font-size:1.8rem; color:#3730a3; font-weight:800; margin-bottom:12px;">{{ course.price }}</p>
-        <button class="button">Proceed to Checkout</button>
+        {% if is_enrolled %}
+        <a href="{% url 'my_course_detail' slug %}" class="button" style="text-decoration:none; display:inline-block;">Open Course</a>
+        {% else %}
+        <form method="post" action="{% url 'buy_course' slug %}">
+            {% csrf_token %}
+            <button class="button" type="submit">Proceed to Checkout</button>
+        </form>
+        {% endif %}
     </article>
 </section>
 {% endblock %}

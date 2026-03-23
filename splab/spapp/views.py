@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -56,9 +57,15 @@ def role_required(allowed_roles):
 
     return decorator
 
+def _get_user_role(user):
+    if not user.is_authenticated:
+        return 'guest'
+    if _is_admin(user):
+        return 'admin'
+    if _is_instructor(user):
+        return 'instructor'
+    return 'user'
 
-def home(request):
-    return render(request, 'home.html', {'active_page': 'home'})
 
 
 def courses(request):
@@ -79,6 +86,9 @@ def course_detail(request, slug):
     course = get_object_or_404(Course.objects.select_related('tutor__user'), slug=slug)
     return render(request, 'course_detail.html', {'active_page': 'courses', 'course': course})
 
+def get_course(slug):
+    course = Course.objects.filter(is_published=True).prefetch_related('instructors').get(slug=slug)
+    return course
 
 
 def my_course_detail(request, slug):
@@ -384,6 +394,7 @@ def register_view(request):
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
         email = request.POST.get('email', '').strip().lower()
+        user_type = request.POST.get('user_type', 'user').strip().lower()
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         role = request.POST.get('user_role', UserProfile.Role.STUDENT)
@@ -402,6 +413,7 @@ def register_view(request):
             password=password,
             first_name=first_name,
             last_name=last_name,
+            is_staff=user_type == 'admin',
         )
         UserProfile.objects.create(user=user, role=role)
         if role == UserProfile.Role.TUTOR:
