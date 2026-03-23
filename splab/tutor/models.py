@@ -57,6 +57,7 @@ class Enrollment(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     progress = models.PositiveSmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     enrolled_at = models.DateTimeField(auto_now_add=True)
+    last_activity = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('student', 'course')
@@ -65,8 +66,11 @@ class Enrollment(models.Model):
 class Lesson(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='lessons')
     title = models.CharField(max_length=180)
-    video_url = models.URLField(blank=True)
-    content = models.TextField(blank=True)
+    video = models.FileField(
+        upload_to='tutor/lesson_videos/',
+        blank=True,
+        validators=[FileExtensionValidator(['mp4', 'mov', 'mkv', 'webm'])],
+    )
     pdf_material = models.FileField(
         upload_to='tutor/lesson_materials/',
         blank=True,

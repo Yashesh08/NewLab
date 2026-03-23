@@ -12,7 +12,7 @@ class CourseForm(forms.ModelForm):
 class LessonForm(forms.ModelForm):
     class Meta:
         model = Lesson
-        fields = ['course', 'title', 'video_url', 'content', 'pdf_material']
+        fields = ['course', 'title', 'video', 'pdf_material']
 
 
 class AssignmentForm(forms.ModelForm):
@@ -21,6 +21,12 @@ class AssignmentForm(forms.ModelForm):
     class Meta:
         model = Assignment
         fields = ['course', 'title', 'description', 'due_date']
+
+
+class SubmissionForm(forms.ModelForm):
+    class Meta:
+        model = Submission
+        fields = ['file']
 
 
 class SubmissionGradeForm(forms.ModelForm):
