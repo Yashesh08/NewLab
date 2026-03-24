@@ -185,3 +185,90 @@
             }
         }
     
+
+
+.stat-card p {
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.stat-card h2 {
+    font-size: 2rem;
+    color: var(--primary-dark);
+}
+
+.inline-form {
+    margin: 0;
+}
+
+.button-muted {
+    background: #334155;
+}
+
+.button-muted:hover {
+    background: #1f2937;
+}
+
+.table-note {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.button-danger {
+    background: var(--danger);
+}
+
+.button-danger:hover {
+    background: #991b1b;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.form-card {
+    max-width: 760px;
+}
+
+.course-form {
+    display: grid;
+    gap: 14px;
+}
+
+.form-row {
+    display: grid;
+    gap: 8px;
+}
+
+.form-row label {
+    font-weight: 700;
+}
+
+.form-row input,
+.form-row textarea,
+.form-row select {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+}
+
+.form-row textarea {
+    min-height: 140px;
+    resize: vertical;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.field-error {
+    color: var(--danger);
+    font-weight: 600;
+}

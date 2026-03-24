@@ -24,6 +24,13 @@ class Course(TimeStampedModel):
     level = models.CharField(max_length=20, choices=Level.choices, default=Level.BEGINNER)
     duration_weeks = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    instructor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='courses_taught',
+    )
     is_published = models.BooleanField(default=True)
 
     class Meta:
