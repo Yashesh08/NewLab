@@ -1,8 +1,13 @@
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.db.models import Count
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import AdminCourseForm, AdminInstructorForm
+from .models import Assignment, Course, Enrollment, InstructorProfile, LiveMeet
 
 COURSE_CATALOG = {
     'full-stack-javascript-bootcamp': {
@@ -11,7 +16,7 @@ COURSE_CATALOG = {
         'level': 'Beginner',
         'duration': '10 weeks',
         'price': '$49',
-        'description': 'Learn HTML, CSS, JavaScript, Node.js, and MongoDB by building complete end-to-end applications.'
+        'description': 'Learn HTML, CSS, JavaScript, Node.js, and MongoDB by building complete end-to-end applications.',
     },
     'react-for-intermediate-developers': {
         'title': 'React for Intermediate Developers',
@@ -19,7 +24,7 @@ COURSE_CATALOG = {
         'level': 'Intermediate',
         'duration': '6 weeks',
         'price': '$59',
-        'description': 'Master hooks, routing, performance optimization, and reusable component architecture in real projects.'
+        'description': 'Master hooks, routing, performance optimization, and reusable component architecture in real projects.',
     },
     'figma-ui-design-workshop': {
         'title': 'Figma UI Design Workshop',
@@ -27,7 +32,7 @@ COURSE_CATALOG = {
         'level': 'Beginner',
         'duration': '4 weeks',
         'price': '$39',
-        'description': 'Build polished user interfaces in Figma with practical workflows, components, and design handoff.'
+        'description': 'Build polished user interfaces in Figma with practical workflows, components, and design handoff.',
     },
     'advanced-product-design-systems': {
         'title': 'Advanced Product Design Systems',
@@ -35,7 +40,7 @@ COURSE_CATALOG = {
         'level': 'Advanced',
         'duration': '8 weeks',
         'price': '$69',
-        'description': 'Create scalable design systems and governance practices for high-growth product teams.'
+        'description': 'Create scalable design systems and governance practices for high-growth product teams.',
     },
     'growth-marketing-seo': {
         'title': 'Growth Marketing & SEO',
@@ -43,7 +48,7 @@ COURSE_CATALOG = {
         'level': 'Intermediate',
         'duration': '5 weeks',
         'price': '$44',
-        'description': 'Learn acquisition channels, SEO fundamentals, and conversion experiments to grow product adoption.'
+        'description': 'Learn acquisition channels, SEO fundamentals, and conversion experiments to grow product adoption.',
     },
     'data-analytics-with-python': {
         'title': 'Data Analytics with Python',
@@ -51,7 +56,7 @@ COURSE_CATALOG = {
         'level': 'Beginner',
         'duration': '7 weeks',
         'price': '$54',
-        'description': 'Analyze and visualize datasets using Python, pandas, and practical business intelligence workflows.'
+        'description': 'Analyze and visualize datasets using Python, pandas, and practical business intelligence workflows.',
     },
 }
 
@@ -147,6 +152,165 @@ def instructors(request):
 
 def dashboard(request):
     return render(request, 'dashboard.html', {'active_page': 'dashboard'})
+
+
+def _handle_admin_panel_action(request):
+    action = request.POST.get('action')
+
+    if action in {'promote_instructor', 'revoke_instructor'}:
+        user = get_object_or_404(User, id=request.POST.get('user_id'))
+        if user == request.user and action == 'revoke_instructor':
+            messages.error(request, 'You cannot revoke your own instructor access from this panel.')
+            return
+
+        user.is_staff = action == 'promote_instructor'
+        user.save(update_fields=['is_staff'])
+        role_label = 'Instructor' if user.is_staff else 'Student'
+        messages.success(request, f'{user.get_full_name() or user.username} is now marked as {role_label}.')
+
+
+@staff_member_required(login_url='login')
+def admin_panel(request):
+    if request.method == 'POST':
+        _handle_admin_panel_action(request)
+        return redirect('admin_panel')
+
+    instructors_list = InstructorProfile.objects.select_related('user').order_by('user__first_name', 'user__last_name')
+    students_list = User.objects.filter(is_staff=False).annotate(total_enrollments=Count('enrollments')).order_by(
+        '-date_joined'
+    )
+
+    context = {
+        'active_page': 'admin_panel',
+        'stats': {
+            'total_courses': Course.objects.count(),
+            'published_courses': Course.objects.filter(is_published=True).count(),
+            'total_enrollments': Enrollment.objects.count(),
+            'active_students': students_list.count(),
+            'total_instructors': instructors_list.count(),
+            'upcoming_live_meets': LiveMeet.objects.count(),
+            'total_assignments': Assignment.objects.count(),
+        },
+        'instructors': instructors_list[:8],
+        'students': students_list[:12],
+    }
+    return render(request, 'admin_panel.html', context)
+
+
+@staff_member_required(login_url='login')
+def admin_course_list(request):
+    courses_qs = Course.objects.select_related('instructor').order_by('title')
+    return render(
+        request,
+        'admin_courses.html',
+        {'active_page': 'admin_panel', 'courses': courses_qs},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_course_create(request):
+    if request.method == 'POST':
+        form = AdminCourseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Course created successfully.')
+            return redirect('admin_courses')
+    else:
+        form = AdminCourseForm()
+
+    return render(
+        request,
+        'admin_course_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Add New Course', 'submit_label': 'Create Course'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_course_edit(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if request.method == 'POST':
+        form = AdminCourseForm(request.POST, instance=course)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Course updated successfully.')
+            return redirect('admin_courses')
+    else:
+        form = AdminCourseForm(instance=course)
+
+    return render(
+        request,
+        'admin_course_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Edit Course', 'submit_label': 'Save Changes'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_course_delete(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if request.method == 'POST':
+        course.delete()
+        messages.success(request, 'Course deleted successfully.')
+    return redirect('admin_courses')
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_list(request):
+    instructors_qs = InstructorProfile.objects.select_related('user').order_by('user__first_name', 'user__last_name')
+    return render(
+        request,
+        'admin_instructors.html',
+        {'active_page': 'admin_panel', 'instructors': instructors_qs},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_create(request):
+    if request.method == 'POST':
+        form = AdminInstructorForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Instructor added successfully.')
+            return redirect('admin_instructors')
+    else:
+        form = AdminInstructorForm()
+
+    return render(
+        request,
+        'admin_instructor_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Add Instructor', 'submit_label': 'Create Instructor'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_edit(request, instructor_id):
+    profile = get_object_or_404(InstructorProfile, id=instructor_id)
+    if request.method == 'POST':
+        form = AdminInstructorForm(request.POST, instance=profile, user_instance=profile.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Instructor details updated successfully.')
+            return redirect('admin_instructors')
+    else:
+        form = AdminInstructorForm(instance=profile, user_instance=profile.user)
+
+    return render(
+        request,
+        'admin_instructor_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Edit Instructor', 'submit_label': 'Save Changes'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_delete(request, instructor_id):
+    profile = get_object_or_404(InstructorProfile, id=instructor_id)
+    if request.method == 'POST':
+        if profile.user == request.user:
+            messages.error(request, 'You cannot delete your own instructor account.')
+            return redirect('admin_instructors')
+
+        profile.user.delete()
+        messages.success(request, 'Instructor deleted successfully.')
+    return redirect('admin_instructors')
 
 
 def login_view(request):

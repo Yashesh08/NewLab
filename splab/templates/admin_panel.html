@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Admin Dashboard{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom: 16px;">
+    <h1 class="section-title">Admin Dashboard</h1>
+    <p class="section-subtitle">Manage instructors, students, and course catalog operations.</p>
+    <div class="table-actions">
+        <a class="button" href="{% url 'admin_courses' %}">Manage Courses</a>
+        <a class="button button-muted" href="{% url 'admin_instructors' %}">Manage Instructors</a>
+    </div>
+</section>
+
+<section class="grid grid-3" style="margin-bottom:16px;">
+    <article class="card stat-card">
+        <p>Total Courses</p>
+        <h2>{{ stats.total_courses }}</h2>
+    </article>
+    <article class="card stat-card">
+        <p>Published Courses</p>
+        <h2>{{ stats.published_courses }}</h2>
+    </article>
+    <article class="card stat-card">
+        <p>Total Enrollments</p>
+        <h2>{{ stats.total_enrollments }}</h2>
+    </article>
+    <article class="card stat-card">
+        <p>Total Instructors</p>
+        <h2>{{ stats.total_instructors }}</h2>
+    </article>
+    <article class="card stat-card">
+        <p>Total Students</p>
+        <h2>{{ stats.active_students }}</h2>
+    </article>
+    <article class="card stat-card">
+        <p>Live Meets / Assignments</p>
+        <h2>{{ stats.upcoming_live_meets }} / {{ stats.total_assignments }}</h2>
+    </article>
+</section>
+
+<section class="grid grid-2">
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.3rem;">Instructor Directory</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Expertise</th>
+                    <th>Experience</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for instructor in instructors %}
+                <tr>
+                    <td>{{ instructor.user.get_full_name|default:instructor.user.username }}</td>
+                    <td>{{ instructor.expertise }}</td>
+                    <td>{{ instructor.experience }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">No instructors added yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </article>
+
+    <article class="card">
+        <h2 class="section-title" style="font-size:1.3rem;">Student Management</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Enrollments</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>{{ student.get_full_name|default:student.username }}</td>
+                    <td>{{ student.email }}</td>
+                    <td>{{ student.total_enrollments }}</td>
+                    <td>
+                        <form method="post" class="inline-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ student.id }}">
+                            <input type="hidden" name="action" value="promote_instructor">
+                            <button type="submit" class="button">Promote</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No students registered yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </article>
+</section>
+{% endblock %}

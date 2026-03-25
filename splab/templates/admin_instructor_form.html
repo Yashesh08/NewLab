@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - {{ form_title }}{% endblock %}
+
+{% block content %}
+<section class="card form-card">
+    <h1 class="section-title">{{ form_title }}</h1>
+    <p class="section-subtitle">Manage instructor identity, expertise, and experience details.</p>
+
+    <form method="post" class="course-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="form-row">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <small class="table-note">{{ field.help_text }}</small>
+                {% endif %}
+                {% if field.errors %}
+                    <small class="field-error">{{ field.errors|striptags }}</small>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <div class="form-actions">
+            <a href="{% url 'admin_instructors' %}" class="button button-muted">Cancel</a>
+            <button type="submit" class="button">{{ submit_label }}</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

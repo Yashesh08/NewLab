@@ -24,6 +24,13 @@ class Course(TimeStampedModel):
     level = models.CharField(max_length=20, choices=Level.choices, default=Level.BEGINNER)
     duration_weeks = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    instructor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='courses_taught',
+    )
     is_published = models.BooleanField(default=True)
 
     class Meta:
@@ -31,6 +38,18 @@ class Course(TimeStampedModel):
 
     def __str__(self):
         return self.title
+
+
+class InstructorProfile(TimeStampedModel):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='instructor_profile')
+    expertise = models.CharField(max_length=150)
+    experience = models.CharField(max_length=120)
+
+    class Meta:
+        ordering = ['user__first_name', 'user__last_name', 'user__username']
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
 
 
 class Enrollment(TimeStampedModel):
