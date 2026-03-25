@@ -18,14 +18,12 @@
                 <span class="pill success">Owned</span>
                 <div>
                     <h3>{{ course.title }}</h3>
-                    <p class="muted">{{ course.category }} • {% if course.duration_weeks %}{{ course.duration_weeks }} weeks{% else %}{{ course.duration }}{% endif %}</p>
+                    <p class="muted">{{ course.category }} • {{ course.duration }}</p>
                 </div>
                 <a class="button" href="{% url 'my_course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Open Course</a>
             </article>
         {% empty %}
             <p class="muted">No purchased courses yet. Enroll in a course to see it here.</p>
-        {% empty %}
-            <p class="muted">No published courses found.</p>
         {% endfor %}
     </div>
 </section>
@@ -48,10 +46,10 @@
     <div id="courseList" class="list">
         {% for course in courses %}
             <article class="item" data-title="{{ course.title|lower }}" data-category="{{ course.category }}">
-                <span class="pill {% if course.level == 'beginner' or course.level == 'Beginner' %}success{% elif course.level == 'intermediate' or course.level == 'Intermediate' %}warning{% else %}danger{% endif %}">{{ course.level }}</span>
+                <span class="pill {% if course.level == 'Beginner' %}success{% elif course.level == 'Intermediate' %}warning{% else %}danger{% endif %}">{{ course.level }}</span>
                 <div>
                     <h3>{{ course.title }}</h3>
-                    <p class="muted">{{ course.category }} • {% if course.duration_weeks %}{{ course.duration_weeks }} weeks{% else %}{{ course.duration }}{% endif %} • {{ course.price }}</p>
+                    <p class="muted">{{ course.category }} • {{ course.duration }} • {{ course.price }}</p>
                 </div>
                 <a class="button" href="{% url 'course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Enroll</a>
             </article>

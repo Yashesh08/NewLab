@@ -1,8 +1,0 @@
-{% extends 'tutor/base.html' %}
-{% block title %}Tutor Profile{% endblock %}
-{% block content %}
-<div class="card p-3">
-  <h4>Profile Settings</h4>
-  <form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Update Profile</button></form>
-</div>
-{% endblock %}

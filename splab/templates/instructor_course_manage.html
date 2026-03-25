@@ -1,91 +1,237 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Manage {{ course.title }} - Instructor Panel{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/instructor_manage.css' %}">
+{% endblock %}
+
 {% block content %}
-<section class="card" style="margin-bottom:16px;">
-    <a href="{% url 'instructor_panel' %}" style="text-decoration:none; color:#4f46e5; font-weight:700;">← Back to Instructor Panel</a>
-    <h1 class="section-title" style="margin-top:12px;">Manage Course: {{ course.title }}</h1>
-    <p class="section-subtitle">Add materials and tests that students can consume from their purchased course page.</p>
+<section class="card" style="margin-bottom:24px;">
+    <a href="{% url 'instructor_panel' %}" class="back-link">← Back to Instructor Panel</a>
+    <h1 class="section-title" style="margin-top:16px;">{{ course.title }}</h1>
+    <p class="section-subtitle">Manage course structure, lectures, materials, and assessments</p>
 </section>
 
-<section class="grid grid-2" style="margin-bottom:16px;">
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.1rem;">Add Section</h2>
-        <form method="post" style="display:grid; gap:10px;">
+<!-- Navigation Tabs -->
+<section class="card" style="margin-bottom:24px;">
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('sections')">📚 Sections & Lectures</button>
+        <button class="tab-btn" onclick="switchTab('materials')">📄 Materials</button>
+        <button class="tab-btn" onclick="switchTab('tests')">✓ Tests & Assignments</button>
+    </div>
+</section>
+
+<!-- Sections & Lectures Tab -->
+<section id="sections" class="tab-content active">
+    <!-- Add Section Form -->
+    <article class="card" style="margin-bottom:24px;">
+        <h2 class="section-title">Add New Section</h2>
+        <p class="section-subtitle">Organize your course content into logical sections</p>
+        <form method="post" class="form-compact">
             {% csrf_token %}
             <input type="hidden" name="action" value="add_section">
-            <input name="section_title" type="text" placeholder="Section title" required>
-            <button class="button" type="submit">Add Section</button>
+            <div class="form-group">
+                <label for="section_title">Section Title</label>
+                <input id="section_title" name="section_title" type="text" placeholder="e.g., Fundamentals, Advanced Topics" required>
+            </div>
+            <button class="button" type="submit">+ Add Section</button>
         </form>
     </article>
 
+    <!-- Sections List -->
+    <article class="card" style="margin-bottom:24px;">
+        <h2 class="section-title">Course Sections</h2>
+        {% if sections %}
+        <div class="sections-list">
+            {% for section in sections %}
+            <div class="section-item">
+                <div class="section-header">
+                    <h3 class="section-name">{{ section.title }}</h3>
+                    <span class="badge">{{ section.videolecture_set.count }} lecture{{ section.videolecture_set.count|pluralize }}</span>
+                </div>
+                {% if section.videolecture_set.all %}
+                <ul class="lectures-list">
+                    {% for video in section.videolecture_set.all %}
+                    <li class="lecture-item">
+                        <span class="lecture-title">▶ {{ video.title }}</span>
+                        <span class="lecture-duration">{{ video.duration_minutes }} min</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty-message">No lectures yet. Add one below.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-message">No sections yet. Create one to get started.</p>
+        {% endif %}
+    </article>
+
+    <!-- Add Video Lecture Form -->
     <article class="card">
-        <h2 class="section-title" style="font-size:1.1rem;">Add Video Lecture</h2>
-        <form method="post" style="display:grid; gap:10px;">
+        <h2 class="section-title">Add Video Lecture</h2>
+        <p class="section-subtitle">Upload video content to your sections</p>
+        <form method="post" class="form-grid">
             {% csrf_token %}
             <input type="hidden" name="action" value="add_video">
-            <select name="section_id" required>
-                <option value="">Select section</option>
-                {% for section in sections %}
-                    <option value="{{ section.id }}">{{ section.title }}</option>
-                {% endfor %}
-            </select>
-            <input name="video_title" type="text" placeholder="Video title" required>
-            <input name="video_url" type="url" placeholder="https://..." required>
-            <input name="duration_minutes" type="number" min="1" value="10" required>
-            <button class="button" type="submit">Add Lecture</button>
+            <div class="form-group">
+                <label for="section_id">Select Section *</label>
+                <select id="section_id" name="section_id" required>
+                    <option value="">Choose a section...</option>
+                    {% for section in sections %}
+                        <option value="{{ section.id }}">{{ section.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="video_title">Video Title *</label>
+                <input id="video_title" name="video_title" type="text" placeholder="e.g., Introduction to Variables" required>
+            </div>
+            <div class="form-group">
+                <label for="video_url">Video URL *</label>
+                <input id="video_url" name="video_url" type="url" placeholder="https://youtube.com/..." required>
+            </div>
+            <div class="form-group">
+                <label for="duration_minutes">Duration (minutes) *</label>
+                <input id="duration_minutes" name="duration_minutes" type="number" min="1" value="10" required>
+            </div>
+            <button class="button" type="submit" style="grid-column: 1 / -1;">+ Add Lecture</button>
         </form>
     </article>
 </section>
 
-<section class="grid grid-2" style="margin-bottom:16px;">
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.1rem;">Add Material / Notes</h2>
-        <form method="post" style="display:grid; gap:10px;">
+<!-- Materials Tab -->
+<section id="materials" class="tab-content">
+    <!-- Add Material Form -->
+    <article class="card" style="margin-bottom:24px;">
+        <h2 class="section-title">Add Study Material / Notes</h2>
+        <p class="section-subtitle">Share course notes, PDFs, and study resources with students</p>
+        <form method="post" class="form-grid">
             {% csrf_token %}
             <input type="hidden" name="action" value="add_note">
-            <input name="note_title" type="text" placeholder="Material title" required>
-            <input name="note_file_url" type="url" placeholder="File URL (optional)">
-            <textarea name="note_content" rows="4" placeholder="Material content"></textarea>
-            <button class="button" type="submit">Add Material</button>
+            <div class="form-group">
+                <label for="note_title">Material Title *</label>
+                <input id="note_title" name="note_title" type="text" placeholder="e.g., Chapter 1 Notes" required>
+            </div>
+            <div class="form-group">
+                <label for="note_file_url">File URL (optional)</label>
+                <input id="note_file_url" name="note_file_url" type="url" placeholder="https://example.com/note.pdf">
+            </div>
+            <div class="form-group">
+                <label for="note_content">Material Content</label>
+                <textarea id="note_content" name="note_content" rows="5" placeholder="Write or paste your notes here..."></textarea>
+            </div>
+            <button class="button" type="submit" style="grid-column: 1 / -1;">+ Add Material</button>
         </form>
     </article>
 
+    <!-- Materials List -->
     <article class="card">
-        <h2 class="section-title" style="font-size:1.1rem;">Add Test</h2>
-        <form method="post" style="display:grid; gap:10px;">
+        <h2 class="section-title">Published Materials</h2>
+        {% if notes %}
+        <div class="materials-list">
+            {% for note in notes %}
+            <div class="material-item">
+                <div class="material-header">
+                    <h3 class="material-title">📄 {{ note.title }}</h3>
+                    {% if note.note_file_url %}
+                    <a href="{{ note.note_file_url }}" class="btn-download" target="_blank">Download</a>
+                    {% endif %}
+                </div>
+                {% if note.note_content %}
+                <p class="material-preview">{{ note.note_content|truncatewords:30 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-message">No materials published yet. Create one to help your students learn better.</p>
+        {% endif %}
+    </article>
+</section>
+
+<!-- Tests Tab -->
+<section id="tests" class="tab-content">
+    <!-- Add Test Form -->
+    <article class="card" style="margin-bottom:24px;">
+        <h2 class="section-title">Create Assessment</h2>
+        <p class="section-subtitle">Design tests and assignments to evaluate student progress</p>
+        <form method="post" class="form-grid">
             {% csrf_token %}
             <input type="hidden" name="action" value="add_test">
-            <input name="test_title" type="text" placeholder="Test title" required>
-            <textarea name="instructions" rows="4" placeholder="Test instructions" required></textarea>
-            <input name="due_at" type="datetime-local" required>
-            <input name="max_score" type="number" min="1" value="100" required>
-            <button class="button" type="submit">Publish Test</button>
+            <div class="form-group">
+                <label for="test_title">Test Title *</label>
+                <input id="test_title" name="test_title" type="text" placeholder="e.g., Quiz 1 - Basics" required>
+            </div>
+            <div class="form-group">
+                <label for="instructions">Instructions *</label>
+                <textarea id="instructions" name="instructions" rows="4" placeholder="Explain the test requirements and instructions..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="due_at">Due Date & Time *</label>
+                <input id="due_at" name="due_at" type="datetime-local" required>
+            </div>
+            <div class="form-group">
+                <label for="max_score">Maximum Score *</label>
+                <input id="max_score" name="max_score" type="number" min="1" value="100" required>
+            </div>
+            <button class="button" type="submit" style="grid-column: 1 / -1;">+ Publish Assessment</button>
         </form>
+    </article>
+
+    <!-- Tests List -->
+    <article class="card">
+        <h2 class="section-title">Published Tests & Assignments</h2>
+        {% if assignments %}
+        <div class="tests-list">
+            {% for test in assignments %}
+            <div class="test-item">
+                <div class="test-header">
+                    <h3 class="test-title">✓ {{ test.title }}</h3>
+                    {% now "U" as current_timestamp %}
+                    {% if test.due_at.timestamp > current_timestamp %}
+                        <span class="badge active">Active</span>
+                    {% else %}
+                        <span class="badge closed">Closed</span>
+                    {% endif %}
+                </div>
+                <div class="test-meta">
+                    <span class="meta-item">📅 Due: {{ test.due_at|date:'M d, Y \a\t H:i' }}</span>
+                    <span class="meta-item">⭐ Max Score: {{ test.max_score }}</span>
+                </div>
+                {% if test.instructions %}
+                <p class="test-instructions">{{ test.instructions }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-message">No assessments published yet. Create one to test student knowledge.</p>
+        {% endif %}
     </article>
 </section>
 
-<section class="grid grid-2">
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.1rem;">Published Materials</h2>
-        <ul style="padding-left:18px; line-height:1.8;">
-            {% for note in notes %}
-                <li>{{ note.title }}</li>
-            {% empty %}
-                <li>No materials yet.</li>
-            {% endfor %}
-        </ul>
-    </article>
-    <article class="card">
-        <h2 class="section-title" style="font-size:1.1rem;">Published Tests</h2>
-        <ul style="padding-left:18px; line-height:1.8;">
-            {% for test in assignments %}
-                <li>{{ test.title }} (Due: {{ test.due_at|date:'M d, Y H:i' }})</li>
-            {% empty %}
-                <li>No tests yet.</li>
-            {% endfor %}
-        </ul>
-    </article>
-</section>
+<script>
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName).classList.add('active');
+    
+    // Mark button as active
+    event.target.classList.add('active');
+}
+</script>
 {% endblock %}
