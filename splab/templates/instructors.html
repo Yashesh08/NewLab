@@ -1,8 +1,11 @@
 {% extends 'base.html' %}
-{% block title %}Instructors{% endblock %}
+
+{% block title %}LearnSphere - Instructors{% endblock %}
+
 {% block content %}
 <section class="card">
     <h1 class="section-title">Meet Our Instructors</h1>
+    <p class="section-subtitle">Learn from industry experts with real project experience.</p>
     <div class="grid grid-3">
         {% for instructor in instructors %}
         <article style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">

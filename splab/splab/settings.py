@@ -12,15 +12,13 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-try:
-    import pymysql
-    pymysql.install_as_MySQLdb()
-except Exception:
-    pymysql = None
 
 
 # Quick-start development settings - unsuitable for production
@@ -45,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'spapp',
-    'tutor',
 ]
 
 MIDDLEWARE = [
@@ -85,18 +82,13 @@ WSGI_APPLICATION = 'splab.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'newlab',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
+        'NAME': 'spdb',    # The name of the database you created in phpMyAdmin
+        'USER': 'root',        # The default XAMPP MySQL username
+        'PASSWORD': '',        # The default XAMPP MySQL password is empty
+        'HOST': 'localhost',   # Or '127.0.0.1' if 'localhost' doesn't work
+        'PORT': '3306',        # The default MySQL port (check XAMPP control panel if different)
     }
 }
-
 
 
 # Password validation
@@ -141,10 +133,18 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-DEFAULT_FROM_EMAIL = 'purohityashesh@gmail.com'
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+# Email settings: use SMTP backend for Gmail
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'purohityashesh@gmail.com')
+
+# Use SMTP backend for actual email sending
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'true').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'purohityashesh@gmail.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+# log configuration at startup
+print(f"EMAIL_BACKEND={EMAIL_BACKEND}")
+print(f"EMAIL_HOST={EMAIL_HOST}, EMAIL_PORT={EMAIL_PORT}, EMAIL_USE_TLS={EMAIL_USE_TLS}")
+print(f"EMAIL_HOST_USER={EMAIL_HOST_USER}")

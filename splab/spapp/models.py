@@ -1,7 +1,5 @@
 from django.conf import settings
-from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
-from django.utils.text import slugify
 
 
 class TimeStampedModel(models.Model):
@@ -12,33 +10,17 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
-class UserProfile(TimeStampedModel):
-    class Role(models.TextChoices):
-        ADMIN = 'admin', 'Admin'
-        TUTOR = 'tutor', 'Tutor'
-        STUDENT = 'student', 'Student'
+class Instructor(TimeStampedModel):
+    name = models.CharField(max_length=120)
+    title = models.CharField(max_length=140)
+    bio = models.TextField()
+    is_active = models.BooleanField(default=True)
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
-
-    def __str__(self):
-        return f'{self.user} ({self.role})'
-
-
-class Tutor(TimeStampedModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tutor_profile')
-    bio = models.TextField(blank=True)
-    profile_picture = models.ImageField(
-        upload_to='tutors/profile_pictures/',
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])],
-    )
-    experience_years = models.PositiveIntegerField(default=0)
-    specialization = models.CharField(max_length=150, blank=True)
-    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
-        return self.user.get_full_name() or self.user.username
+        return self.name
 
 
 class Course(TimeStampedModel):
@@ -49,73 +31,77 @@ class Course(TimeStampedModel):
 
     title = models.CharField(max_length=180)
     slug = models.SlugField(max_length=220, unique=True)
-    short_description = models.CharField(max_length=255, blank=True)
-    description = models.TextField(blank=True)
-    tutor = models.ForeignKey(Tutor, on_delete=models.CASCADE, related_name='courses')
-    thumbnail = models.ImageField(
-        upload_to='courses/thumbnails/',
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])],
-    )
     category = models.CharField(max_length=80)
+    short_description = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
     level = models.CharField(max_length=20, choices=Level.choices, default=Level.BEGINNER)
     duration_weeks = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
     is_published = models.BooleanField(default=True)
     instructors = models.ManyToManyField(Instructor, blank=True, related_name='courses')
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['title']
 
     def __str__(self):
         return self.title
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = slugify(self.title)[:200] or 'course'
-            slug = base_slug
-            counter = 1
-            while Course.objects.exclude(pk=self.pk).filter(slug=slug).exists():
-                slug = f'{base_slug}-{counter}'
-                counter += 1
-            self.slug = slug
-        super().save(*args, **kwargs)
-
 
 class Enrollment(TimeStampedModel):
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pending'
         ACTIVE = 'active', 'Active'
         COMPLETED = 'completed', 'Completed'
+        PAUSED = 'paused', 'Paused'
 
-    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
-    progress = models.PositiveSmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    enrolled_at = models.DateTimeField(auto_now_add=True)
-    last_activity = models.DateTimeField(null=True, blank=True)
+    progress_percent = models.PositiveSmallIntegerField(default=0)
+    enrolled_on = models.DateField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('student', 'course')
-        ordering = ['-enrolled_at']
+        unique_together = ('user', 'course')
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.student} - {self.course}'
+        return f'{self.user} - {self.course}'
 
 
-class Lesson(TimeStampedModel):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='lessons')
-    title = models.CharField(max_length=180)
-    content = models.TextField(blank=True)
-    video_url = models.URLField(blank=True)
-    attachments = models.FileField(
-        upload_to='courses/attachments/',
-        blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'ppt', 'pptx', 'zip'])],
-    )
+class CourseSection(TimeStampedModel):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='sections')
+    title = models.CharField(max_length=150)
+    order = models.PositiveIntegerField(default=1)
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ['course', 'order', 'id']
+
+    def __str__(self):
+        return f'{self.course.title}: {self.title}'
+
+
+class VideoLecture(TimeStampedModel):
+    section = models.ForeignKey(CourseSection, on_delete=models.CASCADE, related_name='lectures')
+    title = models.CharField(max_length=180)
+    video_url = models.URLField()
+    duration_minutes = models.PositiveIntegerField(default=1)
+    order = models.PositiveIntegerField(default=1)
+    is_preview = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['section', 'order', 'id']
+
+    def __str__(self):
+        return self.title
+
+
+class CourseNote(TimeStampedModel):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='notes')
+    title = models.CharField(max_length=150)
+    file_url = models.URLField(blank=True)
+    content = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['course', 'title']
 
     def __str__(self):
         return self.title
@@ -124,29 +110,47 @@ class Lesson(TimeStampedModel):
 class Assignment(TimeStampedModel):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='assignments')
     title = models.CharField(max_length=180)
-    description = models.TextField()
-    due_date = models.DateTimeField()
+    instructions = models.TextField()
+    due_at = models.DateTimeField()
+    max_score = models.PositiveIntegerField(default=100)
 
     class Meta:
-        ordering = ['due_date']
+        ordering = ['due_at']
 
     def __str__(self):
         return self.title
 
 
-class Submission(TimeStampedModel):
+class AssignmentSubmission(TimeStampedModel):
+    class Status(models.TextChoices):
+        SUBMITTED = 'submitted', 'Submitted'
+        REVIEWED = 'reviewed', 'Reviewed'
+        LATE = 'late', 'Late'
+
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='submissions')
-    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
-    file_url = models.FileField(
-        upload_to='assignments/submissions/',
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'zip'])],
-    )
-    submitted_at = models.DateTimeField(auto_now_add=True)
-    grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assignment_submissions')
+    submission_url = models.URLField(blank=True)
+    remarks = models.TextField(blank=True)
+    score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED)
 
     class Meta:
-        unique_together = ('assignment', 'student')
-        ordering = ['-submitted_at']
+        unique_together = ('assignment', 'user')
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.assignment} - {self.student}'
+        return f'{self.assignment.title} - {self.user}'
+
+
+class LiveMeet(TimeStampedModel):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='live_meets')
+    topic = models.CharField(max_length=180)
+    scheduled_at = models.DateTimeField()
+    meeting_url = models.URLField()
+    duration_minutes = models.PositiveIntegerField(default=60)
+
+    class Meta:
+        ordering = ['scheduled_at']
+
+    def __str__(self):
+        return f'{self.course.title}: {self.topic}'
