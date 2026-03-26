@@ -19,6 +19,35 @@
 </section>
 
 <section class="card">
+    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
+        <div>
+            <h2 class="section-title" style="font-size:1.3rem; margin-bottom:4px;">Smart Study Planner</h2>
+            <p class="section-subtitle" style="margin-bottom:0;">AI-style prioritization of your upcoming deadlines and live sessions.</p>
+        </div>
+        <span class="pill {% if high_priority_count %}warning{% else %}success{% endif %}">
+            {{ high_priority_count }} high-priority item{{ high_priority_count|pluralize }}
+        </span>
+    </div>
+    <div style="margin-top:12px; display:grid; gap:10px;">
+        {% for item in planner_items %}
+            <article style="border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+                <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                    <strong>{{ item.kind }} · {{ item.title }}</strong>
+                    <span class="pill {% if item.urgency == 'high' %}danger{% elif item.urgency == 'medium' %}warning{% else %}success{% endif %}">
+                        {{ item.urgency|title }}
+                    </span>
+                </div>
+                <p style="margin:6px 0 0 0; color:#6b7280;">
+                    {{ item.course }} · {{ item.when|date:'M d, Y H:i' }} · {{ item.detail }}
+                </p>
+            </article>
+        {% empty %}
+            <p class="section-subtitle" style="margin:12px 0 0 0;">No upcoming assignments or live sessions yet. Explore more courses to build your planner.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card">
     <h2 class="section-title" style="font-size:1.3rem;">My Courses</h2>
     <table>
         <thead>

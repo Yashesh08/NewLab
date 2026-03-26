@@ -5,15 +5,22 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
 from django.db.models import Avg, Count, Max
-from django.utils import timezone
-from django.utils.text import slugify
 from django.http import Http404
 from django.shortcuts import redirect, render
-from django.contrib.auth.models import User
-from django.core.mail import send_mail
-from django.conf import settings
-from django.shortcuts import render, redirect
-from .models import Assignment, AssignmentSubmission, Course, CourseNote, CourseSection, Enrollment, Instructor, VideoLecture
+from django.utils import timezone
+from django.utils.text import slugify
+
+from .models import (
+    Assignment,
+    AssignmentSubmission,
+    Course,
+    CourseNote,
+    CourseSection,
+    Enrollment,
+    Instructor,
+    LiveMeet,
+    VideoLecture,
+)
 
 
 HOME_FEATURES = [
@@ -130,6 +137,52 @@ def get_course(slug):
     course = Course.objects.filter(is_published=True).prefetch_related('instructors').get(slug=slug)
     return course
 
+
+
+
+def _build_study_planner(enrollments):
+    now = timezone.now()
+    course_ids = [item.course_id for item in enrollments]
+    if not course_ids:
+        return []
+
+    assignments = (
+        Assignment.objects
+        .filter(course_id__in=course_ids, due_at__gte=now)
+        .order_by('due_at')[:8]
+    )
+    live_meets = LiveMeet.objects.filter(
+        course_id__in=course_ids,
+        scheduled_at__gte=now,
+    ).order_by('scheduled_at')[:8]
+
+    planner_items = []
+    for assignment in assignments:
+        days_left = (assignment.due_at.date() - now.date()).days
+        urgency = 'high' if days_left <= 2 else 'medium' if days_left <= 5 else 'low'
+        planner_items.append({
+            'kind': 'Assignment',
+            'title': assignment.title,
+            'course': assignment.course.title,
+            'when': assignment.due_at,
+            'detail': f'Due in {max(days_left, 0)} day(s)',
+            'urgency': urgency,
+        })
+
+    for meet in live_meets:
+        days_left = (meet.scheduled_at.date() - now.date()).days
+        urgency = 'high' if days_left <= 1 else 'medium'
+        planner_items.append({
+            'kind': 'Live Meet',
+            'title': meet.topic,
+            'course': meet.course.title,
+            'when': meet.scheduled_at,
+            'detail': f'Starts in {max(days_left, 0)} day(s)',
+            'urgency': urgency,
+        })
+
+    planner_items.sort(key=lambda item: item['when'])
+    return planner_items[:6]
 
 def home(request):
     courses = list(Course.objects.filter(is_published=True).order_by('title'))
@@ -357,6 +410,9 @@ def dashboard(request):
         0,
     ) if courses_data else 0
 
+    planner_items = _build_study_planner(enrollments)
+    high_priority_count = sum(1 for item in planner_items if item['urgency'] == 'high')
+
     context = {
         'active_page': 'dashboard',
         'user_role': _get_user_role(request.user),
@@ -365,6 +421,8 @@ def dashboard(request):
         'goal_progress': average_progress,
         'streak_days': min(30, len(courses_data) * 3),
         'courses_data': courses_data,
+        'planner_items': planner_items,
+        'high_priority_count': high_priority_count,
     }
     return render(request, 'dashboard.html', context)
 
