@@ -311,6 +311,16 @@ def admin_instructor_delete(request, instructor_id):
 
 
 @staff_member_required(login_url='login')
+def admin_enrollment_list(request):
+    enrollments = Enrollment.objects.select_related('user', 'course').order_by('-enrolled_on', '-created_at')
+    return render(
+        request,
+        'admin_enrollments.html',
+        {'active_page': 'admin_panel', 'enrollments': enrollments},
+    )
+
+
+@staff_member_required(login_url='login')
 def admin_student_list(request):
     students_qs = User.objects.filter(is_staff=False).annotate(total_enrollments=Count('enrollments')).order_by('-date_joined')
     return render(

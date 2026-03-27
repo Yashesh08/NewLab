@@ -241,3 +241,39 @@ class AdminStudentManagementTests(TestCase):
         response = self.client.post(reverse('admin_student_delete', args=[self.student_user.id]), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(id=self.student_user.id).exists())
+
+
+class AdminEnrollmentViewTests(TestCase):
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staff2@learnsphere.com',
+            email='staff2@learnsphere.com',
+            password='StrongPass123!',
+            is_staff=True,
+        )
+        self.student_user = User.objects.create_user(
+            username='enrollstudent@learnsphere.com',
+            email='enrollstudent@learnsphere.com',
+            password='StrongPass123!',
+            first_name='Enroll',
+            last_name='Student',
+        )
+        self.course = Course.objects.create(
+            title='Enrollment Course',
+            slug='enrollment-course',
+            category='General',
+            short_description='short',
+            description='desc',
+            level=Course.Level.BEGINNER,
+            duration_weeks=4,
+            price='30.00',
+            is_published=True,
+        )
+        Enrollment.objects.create(user=self.student_user, course=self.course, status=Enrollment.Status.ACTIVE)
+        self.client.login(username='staff2@learnsphere.com', password='StrongPass123!')
+
+    def test_admin_enrollment_list_view(self):
+        response = self.client.get(reverse('admin_enrollments'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Enroll Student')
+        self.assertContains(response, 'Enrollment Course')
