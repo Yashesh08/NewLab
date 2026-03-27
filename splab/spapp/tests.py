@@ -185,3 +185,58 @@ class AdminInstructorCrudTests(TestCase):
         response = self.client.post(reverse('admin_instructor_delete', args=[other_profile.id]), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(InstructorProfile.objects.filter(id=other_profile.id).exists())
+
+
+class AdminStudentManagementTests(TestCase):
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staff@learnsphere.com',
+            email='staff@learnsphere.com',
+            password='StrongPass123!',
+            is_staff=True,
+        )
+        self.student_user = User.objects.create_user(
+            username='learner@learnsphere.com',
+            email='learner@learnsphere.com',
+            password='StrongPass123!',
+            first_name='Learner',
+        )
+        self.course = Course.objects.create(
+            title='Student Testing Course',
+            slug='student-testing-course',
+            category='General',
+            short_description='short',
+            description='desc',
+            level=Course.Level.BEGINNER,
+            duration_weeks=4,
+            price='12.00',
+            is_published=True,
+        )
+        Enrollment.objects.create(user=self.student_user, course=self.course, status=Enrollment.Status.ACTIVE)
+        self.client.login(username='staff@learnsphere.com', password='StrongPass123!')
+
+    def test_admin_student_list_view(self):
+        response = self.client.get(reverse('admin_students'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'learner@learnsphere.com')
+
+    def test_admin_student_detail_view(self):
+        response = self.client.get(reverse('admin_student_detail', args=[self.student_user.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Student Testing Course')
+
+    def test_admin_can_deactivate_and_reactivate_student(self):
+        deactivate_response = self.client.post(reverse('admin_student_deactivate', args=[self.student_user.id]), follow=True)
+        self.assertEqual(deactivate_response.status_code, 200)
+        self.student_user.refresh_from_db()
+        self.assertFalse(self.student_user.is_active)
+
+        activate_response = self.client.post(reverse('admin_student_deactivate', args=[self.student_user.id]), follow=True)
+        self.assertEqual(activate_response.status_code, 200)
+        self.student_user.refresh_from_db()
+        self.assertTrue(self.student_user.is_active)
+
+    def test_admin_can_delete_student(self):
+        response = self.client.post(reverse('admin_student_delete', args=[self.student_user.id]), follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(id=self.student_user.id).exists())

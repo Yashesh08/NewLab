@@ -313,6 +313,47 @@ def admin_instructor_delete(request, instructor_id):
     return redirect('admin_instructors')
 
 
+@staff_member_required(login_url='login')
+def admin_student_list(request):
+    students_qs = User.objects.filter(is_staff=False).annotate(total_enrollments=Count('enrollments')).order_by('-date_joined')
+    return render(
+        request,
+        'admin_students.html',
+        {'active_page': 'admin_panel', 'students': students_qs},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_student_detail(request, student_id):
+    student = get_object_or_404(User.objects.filter(is_staff=False), id=student_id)
+    enrollments = Enrollment.objects.select_related('course').filter(user=student).order_by('-created_at')
+    return render(
+        request,
+        'admin_student_detail.html',
+        {'active_page': 'admin_panel', 'student': student, 'enrollments': enrollments},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_student_deactivate(request, student_id):
+    student = get_object_or_404(User.objects.filter(is_staff=False), id=student_id)
+    if request.method == 'POST':
+        student.is_active = not student.is_active
+        student.save(update_fields=['is_active'])
+        status_text = 'activated' if student.is_active else 'deactivated'
+        messages.success(request, f'Student account {status_text} successfully.')
+    return redirect('admin_students')
+
+
+@staff_member_required(login_url='login')
+def admin_student_delete(request, student_id):
+    student = get_object_or_404(User.objects.filter(is_staff=False), id=student_id)
+    if request.method == 'POST':
+        student.delete()
+        messages.success(request, 'Student account deleted successfully.')
+    return redirect('admin_students')
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
