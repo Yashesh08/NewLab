@@ -50,8 +50,9 @@ class AdminPanelViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'admin_panel.html')
         self.assertEqual(response.context['stats']['total_courses'], 1)
-        self.assertEqual(response.context['stats']['total_enrollments'], 1)
         self.assertEqual(response.context['stats']['total_instructors'], 1)
+        self.assertEqual(response.context['stats']['total_students'], 1)
+        self.assertEqual(response.context['stats']['total_enrollments'], 1)
 
 
 class AdminCourseCrudTests(TestCase):

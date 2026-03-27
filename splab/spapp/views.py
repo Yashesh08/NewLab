@@ -7,7 +7,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import AdminCourseForm, AdminInstructorForm
-from .models import Assignment, Course, Enrollment, InstructorProfile, LiveMeet
+from .models import Course, Enrollment, InstructorProfile
 
 COURSE_CATALOG = {
     'full-stack-javascript-bootcamp': {
@@ -184,12 +184,9 @@ def admin_panel(request):
         'active_page': 'admin_panel',
         'stats': {
             'total_courses': Course.objects.count(),
-            'published_courses': Course.objects.filter(is_published=True).count(),
-            'total_enrollments': Enrollment.objects.count(),
-            'active_students': students_list.count(),
             'total_instructors': instructors_list.count(),
-            'upcoming_live_meets': LiveMeet.objects.count(),
-            'total_assignments': Assignment.objects.count(),
+            'total_students': students_list.count(),
+            'total_enrollments': Enrollment.objects.count(),
         },
         'instructors': instructors_list[:8],
         'students': students_list[:12],

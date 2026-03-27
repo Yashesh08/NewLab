@@ -5,7 +5,7 @@
 {% block content %}
 <section class="card" style="margin-bottom: 16px;">
     <h1 class="section-title">Admin Dashboard</h1>
-    <p class="section-subtitle">Manage instructors, students, and course catalog operations.</p>
+    <p class="section-subtitle">Overview of core platform statistics and quick admin actions.</p>
     <div class="table-actions">
         <a class="button" href="{% url 'admin_courses' %}">Manage Courses</a>
         <a class="button button-muted" href="{% url 'admin_instructors' %}">Manage Instructors</a>
@@ -13,18 +13,10 @@
     </div>
 </section>
 
-<section class="grid grid-3" style="margin-bottom:16px;">
+<section class="grid grid-2" style="margin-bottom:16px;">
     <article class="card stat-card">
         <p>Total Courses</p>
         <h2>{{ stats.total_courses }}</h2>
-    </article>
-    <article class="card stat-card">
-        <p>Published Courses</p>
-        <h2>{{ stats.published_courses }}</h2>
-    </article>
-    <article class="card stat-card">
-        <p>Total Enrollments</p>
-        <h2>{{ stats.total_enrollments }}</h2>
     </article>
     <article class="card stat-card">
         <p>Total Instructors</p>
@@ -32,11 +24,11 @@
     </article>
     <article class="card stat-card">
         <p>Total Students</p>
-        <h2>{{ stats.active_students }}</h2>
+        <h2>{{ stats.total_students }}</h2>
     </article>
     <article class="card stat-card">
-        <p>Live Meets / Assignments</p>
-        <h2>{{ stats.upcoming_live_meets }} / {{ stats.total_assignments }}</h2>
+        <p>Total Enrollments</p>
+        <h2>{{ stats.total_enrollments }}</h2>
     </article>
 </section>
 
@@ -68,13 +60,12 @@
     </article>
 
     <article class="card">
-        <h2 class="section-title" style="font-size:1.3rem;">Student Management</h2>
+        <h2 class="section-title" style="font-size:1.3rem;">Recent Students</h2>
         <table>
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Enrollments</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -84,7 +75,6 @@
                 <tr>
                     <td>{{ student.get_full_name|default:student.username }}</td>
                     <td>{{ student.email }}</td>
-                    <td>{{ student.total_enrollments }}</td>
                     <td>{% if student.is_active %}<span class="pill success">Active</span>{% else %}<span class="pill danger">Inactive</span>{% endif %}</td>
                     <td><a href="{% url 'admin_student_detail' student.id %}" class="button button-muted">Details</a></td>
                 </tr>
