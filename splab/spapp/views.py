@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
-from django.db.models import Avg, Count, Max
+from django.db.models import Avg, Count, Max, Q
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -62,6 +62,12 @@ def _course_to_dict(course):
         'description': course.description or course.short_description,
         'short_description': course.short_description,
     }
+
+def _course_instructor_label(course):
+    if course.created_by:
+        return course.created_by.get_full_name() or course.created_by.username
+    lead_instructor = course.instructors.order_by('name').first()
+    return lead_instructor.name if lead_instructor else 'Unassigned'
 
 
 def _send_notification_email(to_email, subject, message):
@@ -128,7 +134,7 @@ def _generate_unique_slug(title):
 def _get_instructor_courses(user):
     return (
         Course.objects
-        .filter(instructors__name__iexact=user.get_full_name())
+        .filter(Q(instructors__name__iexact=user.get_full_name()) | Q(created_by=user))
         .distinct()
         .order_by('title')
     )
@@ -575,11 +581,31 @@ def admin_panel(request):
                 duration_weeks=duration_weeks_value,
                 price=price_value,
                 is_published=True,
+                approval_status=Course.ApprovalStatus.APPROVED,
+                created_by=request.user,
             )
             if instructor_ids:
                 course.instructors.set(Instructor.objects.filter(id__in=instructor_ids, is_active=True))
 
             messages.success(request, f'Course "{course.title}" created and instructor mapping saved.')
+            return redirect('admin_panel')
+        if action in {'approve_course', 'reject_course'}:
+            course_id = request.POST.get('course_id')
+            pending_course = Course.objects.filter(id=course_id).first()
+            if pending_course is None:
+                messages.error(request, 'Course not found.')
+                return redirect('admin_panel')
+
+            if action == 'approve_course':
+                pending_course.approval_status = Course.ApprovalStatus.APPROVED
+                pending_course.is_published = True
+                pending_course.save(update_fields=['approval_status', 'is_published', 'updated_at'])
+                messages.success(request, f'Course "{pending_course.title}" approved.')
+            else:
+                pending_course.approval_status = Course.ApprovalStatus.REJECTED
+                pending_course.is_published = False
+                pending_course.save(update_fields=['approval_status', 'is_published', 'updated_at'])
+                messages.info(request, f'Course "{pending_course.title}" rejected.')
             return redirect('admin_panel')
 
     total_users = User.objects.count()
@@ -590,6 +616,13 @@ def admin_panel(request):
     recent_users = User.objects.order_by('-date_joined')[:5]
     all_users = User.objects.order_by('-date_joined')
     recent_courses = Course.objects.order_by('-created_at')[:5]
+    pending_courses = (
+        Course.objects
+        .filter(approval_status=Course.ApprovalStatus.PENDING)
+        .select_related('created_by')
+        .prefetch_related('instructors')
+        .order_by('-created_at')
+    )
 
     context = {
         'active_page': 'admin_panel',
@@ -602,6 +635,15 @@ def admin_panel(request):
         'recent_courses': recent_courses,
         'instructors': Instructor.objects.filter(is_active=True).order_by('name'),
         'course_levels': Course.Level.choices,
+        'pending_course_rows': [
+            {
+                'id': course.id,
+                'title': course.title,
+                'instructor': _course_instructor_label(course),
+                'status': course.get_approval_status_display(),
+            }
+            for course in pending_courses
+        ],
     }
     return render(request, 'admin_panel.html', context)
 
@@ -638,6 +680,48 @@ def delete_user(request, user_id):
     return redirect('admin_panel')
 @user_passes_test(_is_instructor, login_url='home', redirect_field_name=None)
 def instructor_panel(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'create_course_request':
+            title = request.POST.get('title', '').strip()
+            category = request.POST.get('category', '').strip()
+            short_description = request.POST.get('short_description', '').strip()
+            description = request.POST.get('description', '').strip()
+            level = request.POST.get('level', Course.Level.BEGINNER)
+            duration_weeks = request.POST.get('duration_weeks', '1').strip()
+            price = request.POST.get('price', '0').strip()
+
+            if not all([title, category, short_description]):
+                messages.error(request, 'Title, category, and short description are required.')
+                return redirect('instructor_panel')
+            try:
+                duration_weeks_value = max(1, int(duration_weeks))
+                price_value = max(0, float(price))
+            except ValueError:
+                messages.error(request, 'Duration and price must be valid numbers.')
+                return redirect('instructor_panel')
+
+            course = Course.objects.create(
+                title=title,
+                slug=_generate_unique_slug(title),
+                category=category,
+                short_description=short_description,
+                description=description,
+                level=level if level in Course.Level.values else Course.Level.BEGINNER,
+                duration_weeks=duration_weeks_value,
+                price=price_value,
+                is_published=False,
+                approval_status=Course.ApprovalStatus.PENDING,
+                created_by=request.user,
+            )
+            instructor_name = request.user.get_full_name().strip()
+            if instructor_name:
+                instructor = Instructor.objects.filter(name__iexact=instructor_name, is_active=True).first()
+                if instructor:
+                    course.instructors.add(instructor)
+
+            messages.success(request, f'Course "{course.title}" submitted for admin approval.')
+            return redirect('instructor_panel')
 
     courses_taught = _get_instructor_courses(request.user)
 
@@ -650,6 +734,7 @@ def instructor_panel(request):
             'enrollment_count': course.enrollments.count(),
             'materials_count': course.notes.count() + course.sections.count(),
             'tests_count': course.assignments.count(),
+            'approval_status': course.get_approval_status_display(),
         }
         for course in courses_taught
     ]
@@ -659,6 +744,7 @@ def instructor_panel(request):
         'course_rows': course_rows,
         'total_courses': len(course_rows),
         'total_enrollments': sum(item['enrollment_count'] for item in course_rows),
+        'course_levels': Course.Level.choices,
     }
     return render(request, 'instructor_panel.html', context)
 
