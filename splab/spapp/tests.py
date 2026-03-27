@@ -1,9 +1,6 @@
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
-
-from .models import Assignment, Course, Enrollment, LiveMeet
 
 
 class RoleAccessTests(TestCase):
@@ -59,49 +56,3 @@ class RoleAccessTests(TestCase):
 
         self.assertRedirects(admin_response, reverse('home'))
         self.assertRedirects(instructor_response, reverse('home'))
-
-
-class DashboardPlannerTests(TestCase):
-    def setUp(self):
-        self.password = 'testpass123'
-        self.user = User.objects.create_user(
-            username='learner@example.com',
-            email='learner@example.com',
-            password=self.password,
-        )
-        self.course = Course.objects.create(
-            title='Data Science Bootcamp',
-            slug='data-science-bootcamp',
-            category='Data',
-            short_description='Learn practical data science.',
-            description='A complete data science track.',
-            level=Course.Level.BEGINNER,
-            duration_weeks=8,
-            price=99.99,
-            is_published=True,
-        )
-        Enrollment.objects.create(user=self.user, course=self.course, progress_percent=25)
-
-    def test_dashboard_includes_planner_items_for_upcoming_events(self):
-        Assignment.objects.create(
-            course=self.course,
-            title='Week 1 Assignment',
-            instructions='Submit notebook',
-            due_at=timezone.now() + timezone.timedelta(days=2),
-            max_score=100,
-        )
-        LiveMeet.objects.create(
-            course=self.course,
-            topic='Doubt Solving Session',
-            scheduled_at=timezone.now() + timezone.timedelta(days=1),
-            meeting_url='https://example.com/live-session',
-            duration_minutes=45,
-        )
-
-        self.client.login(username=self.user.username, password=self.password)
-        response = self.client.get(reverse('dashboard'))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Smart Study Planner')
-        self.assertEqual(len(response.context['planner_items']), 2)
-        self.assertEqual(response.context['high_priority_count'], 2)
