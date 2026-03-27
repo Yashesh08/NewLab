@@ -5,15 +5,23 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
 from django.db.models import Avg, Count, Max
+from django.http import Http404
+from django.urls import reverse
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
-from django.http import Http404
-from django.shortcuts import redirect, render
-from django.contrib.auth.models import User
-from django.core.mail import send_mail
-from django.conf import settings
-from django.shortcuts import render, redirect
-from .models import Assignment, AssignmentSubmission, Course, CourseNote, CourseSection, Enrollment, Instructor, VideoLecture
+
+from .models import (
+    Assignment,
+    AssignmentSubmission,
+    Course,
+    CourseNote,
+    CourseSection,
+    Enrollment,
+    Instructor,
+    LiveMeet,
+    VideoLecture,
+)
 
 
 HOME_FEATURES = [
@@ -130,6 +138,78 @@ def get_course(slug):
     course = Course.objects.filter(is_published=True).prefetch_related('instructors').get(slug=slug)
     return course
 
+
+
+
+def _format_relative_day(days_delta, overdue=False):
+    if overdue:
+        return f'Overdue by {abs(days_delta)} day(s)'
+    if days_delta == 0:
+        return 'Today'
+    if days_delta == 1:
+        return 'Tomorrow'
+    return f'In {days_delta} day(s)'
+
+
+def _build_study_planner(enrollments):
+    now = timezone.now()
+    course_ids = [item.course_id for item in enrollments]
+    if not course_ids:
+        return {'items': [], 'summary': {'high_priority_count': 0, 'overdue_count': 0, 'upcoming_count': 0}}
+
+    assignments = (
+        Assignment.objects
+        .select_related('course')
+        .filter(course_id__in=course_ids, due_at__gte=now - timezone.timedelta(days=2))
+        .order_by('due_at')[:8]
+    )
+    live_meets = LiveMeet.objects.select_related('course').filter(
+        course_id__in=course_ids,
+        scheduled_at__gte=now,
+    ).order_by('scheduled_at')[:8]
+
+    planner_items = []
+    for assignment in assignments:
+        days_left = (assignment.due_at.date() - now.date()).days
+        is_overdue = assignment.due_at < now
+        urgency = 'high' if is_overdue or days_left <= 2 else 'medium' if days_left <= 5 else 'low'
+        planner_items.append({
+            'kind': 'Assignment',
+            'title': assignment.title,
+            'course': assignment.course.title,
+            'when': assignment.due_at,
+            'detail': _format_relative_day(days_left, overdue=is_overdue),
+            'urgency': urgency,
+            'is_overdue': is_overdue,
+            'action_label': 'Open test',
+            'action_url': reverse('attempt_test', args=[assignment.course.slug, assignment.id]),
+        })
+
+    for meet in live_meets:
+        days_left = (meet.scheduled_at.date() - now.date()).days
+        urgency = 'high' if days_left <= 1 else 'medium'
+        planner_items.append({
+            'kind': 'Live Meet',
+            'title': meet.topic,
+            'course': meet.course.title,
+            'when': meet.scheduled_at,
+            'detail': _format_relative_day(max(days_left, 0)),
+            'urgency': urgency,
+            'is_overdue': False,
+            'action_label': 'Join meet',
+            'action_url': meet.meeting_url,
+        })
+
+    planner_items.sort(key=lambda item: item['when'])
+    planner_items = planner_items[:6]
+    return {
+        'items': planner_items,
+        'summary': {
+            'high_priority_count': sum(1 for item in planner_items if item['urgency'] == 'high'),
+            'overdue_count': sum(1 for item in planner_items if item['is_overdue']),
+            'upcoming_count': len(planner_items),
+        },
+    }
 
 def home(request):
     courses = list(Course.objects.filter(is_published=True).order_by('title'))
@@ -357,6 +437,17 @@ def dashboard(request):
         0,
     ) if courses_data else 0
 
+    planner_data = _build_study_planner(enrollments)
+    planner_items = planner_data['items']
+    planner_summary = planner_data['summary']
+
+    next_course = next((item for item in courses_data if item['progress'] < 100), None)
+    focus_message = (
+        f"Focus next on {next_course['course']} ({next_course['progress']}% complete)."
+        if next_course
+        else 'Great job! You are caught up. Explore new courses to continue your streak.'
+    )
+
     context = {
         'active_page': 'dashboard',
         'user_role': _get_user_role(request.user),
@@ -365,6 +456,11 @@ def dashboard(request):
         'goal_progress': average_progress,
         'streak_days': min(30, len(courses_data) * 3),
         'courses_data': courses_data,
+        'planner_items': planner_items,
+        'high_priority_count': planner_summary['high_priority_count'],
+        'overdue_count': planner_summary['overdue_count'],
+        'upcoming_count': planner_summary['upcoming_count'],
+        'focus_message': focus_message,
     }
     return render(request, 'dashboard.html', context)
 
