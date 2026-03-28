@@ -105,3 +105,69 @@ class DashboardPlannerTests(TestCase):
         self.assertContains(response, 'Smart Study Planner')
         self.assertEqual(len(response.context['planner_items']), 2)
         self.assertEqual(response.context['high_priority_count'], 2)
+
+
+class CoursesFilteringTests(TestCase):
+    def setUp(self):
+        Course.objects.create(
+            title='Python for Beginners',
+            slug='python-for-beginners',
+            category='Development',
+            short_description='Start coding with Python.',
+            description='Hands-on Python foundations.',
+            level=Course.Level.BEGINNER,
+            duration_weeks=4,
+            price=39.00,
+            is_published=True,
+        )
+        Course.objects.create(
+            title='Advanced Data Pipelines',
+            slug='advanced-data-pipelines',
+            category='Data',
+            short_description='Build modern data pipelines.',
+            description='ETL, orchestration, and reliability.',
+            level=Course.Level.ADVANCED,
+            duration_weeks=12,
+            price=89.00,
+            is_published=True,
+        )
+        Course.objects.create(
+            title='Product Design Basics',
+            slug='product-design-basics',
+            category='Design',
+            short_description='Learn design fundamentals.',
+            description='UI/UX core principles.',
+            level=Course.Level.INTERMEDIATE,
+            duration_weeks=6,
+            price=59.00,
+            is_published=True,
+        )
+
+    def test_courses_page_applies_combined_filters(self):
+        response = self.client.get(
+            reverse('courses'),
+            {
+                'q': 'data',
+                'category': 'Data',
+                'level': Course.Level.ADVANCED,
+                'max_price': '90',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Advanced Data Pipelines')
+        self.assertNotContains(response, 'Python for Beginners')
+        self.assertEqual(response.context['result_count'], 1)
+
+    def test_courses_page_sorts_by_price_high_to_low(self):
+        response = self.client.get(
+            reverse('courses'),
+            {'sort': 'price_high_low'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        course_titles = [course['title'] for course in response.context['courses']]
+        self.assertEqual(
+            course_titles,
+            ['Advanced Data Pipelines', 'Product Design Basics', 'Python for Beginners'],
+        )
