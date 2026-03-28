@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
-from django.db.models import Avg, Count, Max
+from django.db.models import Avg, Count, Max, Min, Q
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -239,8 +239,61 @@ def home(request):
 
 
 def courses(request):
-    queryset = Course.objects.filter(is_published=True).order_by('title')
+    queryset = Course.objects.filter(is_published=True)
+
+    search_query = request.GET.get('q', '').strip()
+    selected_category = request.GET.get('category', '').strip()
+    selected_level = request.GET.get('level', '').strip()
+    sort_by = request.GET.get('sort', 'title_asc').strip() or 'title_asc'
+    max_price_raw = request.GET.get('max_price', '').strip()
+
+    if search_query:
+        queryset = queryset.filter(
+            Q(title__icontains=search_query)
+            | Q(category__icontains=search_query)
+            | Q(short_description__icontains=search_query)
+        )
+
+    if selected_category and selected_category != 'All':
+        queryset = queryset.filter(category=selected_category)
+
+    if selected_level and selected_level != 'All':
+        queryset = queryset.filter(level=selected_level)
+
+    selected_max_price = ''
+    if max_price_raw:
+        try:
+            selected_max_price = max(float(max_price_raw), 0)
+            queryset = queryset.filter(price__lte=selected_max_price)
+        except ValueError:
+            selected_max_price = ''
+
+    ordering_map = {
+        'title_asc': ('title',),
+        'title_desc': ('-title',),
+        'price_low_high': ('price', 'title'),
+        'price_high_low': ('-price', 'title'),
+        'duration_short_long': ('duration_weeks', 'title'),
+        'duration_long_short': ('-duration_weeks', 'title'),
+    }
+    queryset = queryset.order_by(*ordering_map.get(sort_by, ordering_map['title_asc']))
+
     courses_list = [_course_to_dict(course) for course in queryset]
+
+    categories = list(
+        Course.objects
+        .filter(is_published=True)
+        .values_list('category', flat=True)
+        .distinct()
+        .order_by('category')
+    )
+    level_choices = [{'value': value, 'label': label} for value, label in Course.Level.choices]
+    published_price_range = Course.objects.filter(is_published=True).aggregate(
+        min_price=Min('price'),
+        max_price=Max('price'),
+    )
+    min_price = float(published_price_range['min_price'] or 0)
+    max_price = float(published_price_range['max_price'] or 0)
 
     purchased_courses = []
     if request.user.is_authenticated:
@@ -259,6 +312,18 @@ def courses(request):
             'active_page': 'courses',
             'courses': courses_list,
             'purchased_courses': purchased_courses,
+            'search_query': search_query,
+            'selected_category': selected_category or 'All',
+            'selected_level': selected_level or 'All',
+            'selected_max_price': selected_max_price,
+            'sort_by': sort_by,
+            'categories': categories,
+            'level_choices': level_choices,
+            'result_count': len(courses_list),
+            'price_bounds': {
+                'min': min_price,
+                'max': max_price,
+            },
         },
     )
 
