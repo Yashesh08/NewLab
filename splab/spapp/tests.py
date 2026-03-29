@@ -51,8 +51,21 @@ class RoleAccessTests(TestCase):
     def test_regular_user_cannot_access_admin_or_instructor_panel(self):
         self.client.login(username=self.regular_user.username, password=self.password)
 
-        admin_response = self.client.get(reverse('admin_panel'))
+        admin_response = self.client.get(reverse('admin_panel'), follow=True)
         instructor_response = self.client.get(reverse('instructor_panel'))
 
-        self.assertRedirects(admin_response, reverse('home'))
+        self.assertRedirects(admin_response, reverse('dashboard'))
+        self.assertContains(admin_response, 'Unauthorized: only admins can access admin dashboard pages.')
         self.assertRedirects(instructor_response, reverse('home'))
+
+    def test_instructor_user_cannot_access_admin_routes(self):
+        self.client.login(username=self.instructor_user.username, password=self.password)
+
+        admin_response = self.client.get(reverse('admin_panel'), follow=True)
+
+        self.assertRedirects(admin_response, reverse('dashboard'))
+        self.assertContains(admin_response, 'Unauthorized: only admins can access admin dashboard pages.')
+
+    def test_anonymous_user_redirected_to_login_for_admin_routes(self):
+        response = self.client.get(reverse('admin_panel'))
+        self.assertRedirects(response, f"{reverse('login')}?next={reverse('admin_panel')}")

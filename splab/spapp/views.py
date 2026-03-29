@@ -1,3 +1,5 @@
+from functools import wraps
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -5,14 +7,10 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
 from django.db.models import Avg, Count, Max
-from django.utils import timezone
-from django.utils.text import slugify
 from django.http import Http404
 from django.shortcuts import redirect, render
-from django.contrib.auth.models import User
-from django.core.mail import send_mail
-from django.conf import settings
-from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.utils.text import slugify
 from .models import Assignment, AssignmentSubmission, Course, CourseNote, CourseSection, Enrollment, Instructor, VideoLecture
 
 
@@ -107,6 +105,18 @@ def _get_user_role(user):
     return 'user'
 
 
+
+
+def admin_required(view_func):
+    @login_required(login_url='login')
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not _is_admin(request.user):
+            messages.error(request, 'Unauthorized: only admins can access admin dashboard pages.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
 
 def _generate_unique_slug(title):
     base_slug = slugify(title) or 'course'
@@ -479,8 +489,7 @@ def register_view(request):
 
 
 
-@login_required(login_url='login')
-@user_passes_test(_is_admin, login_url='home', redirect_field_name=None)
+@admin_required
 def admin_panel(request):
 
     if request.method == 'POST':
@@ -548,8 +557,7 @@ def admin_panel(request):
     return render(request, 'admin_panel.html', context)
 
 
-@login_required(login_url='login')
-@user_passes_test(_is_admin, login_url='home', redirect_field_name=None)
+@admin_required
 def delete_user(request, user_id):
     """Delete a user from the system."""
     
