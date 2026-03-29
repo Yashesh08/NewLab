@@ -1,8 +1,9 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.utils.text import slugify
 
-from .models import Course, InstructorProfile
+from .models import AssignmentSubmission, Course, InstructorProfile
 
 
 class AdminCourseForm(forms.ModelForm):
@@ -97,3 +98,96 @@ class AdminInstructorForm(forms.ModelForm):
             profile.save()
 
         return profile
+
+
+class LoginForm(forms.Form):
+    email = forms.EmailField()
+    password = forms.CharField(widget=forms.PasswordInput)
+
+
+class RegisterForm(forms.Form):
+    USER_TYPE_CHOICES = (
+        ('user', 'User'),
+        ('instructor', 'Instructor'),
+        ('admin', 'Admin'),
+    )
+
+    first_name = forms.CharField(max_length=150)
+    last_name = forms.CharField(max_length=150)
+    email = forms.EmailField()
+    user_type = forms.ChoiceField(choices=USER_TYPE_CHOICES)
+    password = forms.CharField(widget=forms.PasswordInput)
+    confirm_password = forms.CharField(widget=forms.PasswordInput)
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(username=email).exists() or User.objects.filter(email=email).exists():
+            raise forms.ValidationError('An account with this email already exists.')
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        confirm_password = cleaned_data.get('confirm_password')
+        if password and confirm_password and password != confirm_password:
+            self.add_error('confirm_password', 'Passwords do not match.')
+        return cleaned_data
+
+
+class InstructorCourseRequestForm(forms.ModelForm):
+    class Meta:
+        model = Course
+        fields = ('title', 'category', 'short_description', 'description', 'level', 'duration_weeks', 'price')
+
+    def save(self, commit=True):
+        course = super().save(commit=False)
+        course.slug = AdminCourseForm._build_unique_slug(course.title, course.pk)
+        course.is_published = False
+        course.approval_status = Course.ApprovalStatus.PENDING
+        if commit:
+            course.save()
+        return course
+
+
+class CourseSectionForm(forms.Form):
+    section_title = forms.CharField(max_length=150)
+
+
+class CourseVideoForm(forms.Form):
+    section_id = forms.IntegerField(min_value=1)
+    video_title = forms.CharField(max_length=180)
+    video_url = forms.URLField()
+    duration_minutes = forms.IntegerField(min_value=1, required=False, initial=1)
+
+
+class CourseNoteForm(forms.Form):
+    note_title = forms.CharField(max_length=150)
+    note_content = forms.CharField(required=False, widget=forms.Textarea)
+    note_file_url = forms.URLField(required=False)
+
+
+class CourseAssignmentForm(forms.Form):
+    test_title = forms.CharField(max_length=180)
+    instructions = forms.CharField(widget=forms.Textarea)
+    due_at = forms.DateTimeField(
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
+    )
+    max_score = forms.IntegerField(min_value=1, required=False, initial=100)
+
+    def clean_due_at(self):
+        due_at = self.cleaned_data['due_at']
+        return timezone.make_aware(due_at) if timezone.is_naive(due_at) else due_at
+
+
+class TestAttemptForm(forms.ModelForm):
+    answer_text = forms.CharField(required=False, widget=forms.Textarea)
+
+    class Meta:
+        model = AssignmentSubmission
+        fields = ('submission_url',)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get('submission_url') and not cleaned_data.get('answer_text'):
+            raise forms.ValidationError('Please provide an answer text or submission URL.')
+        return cleaned_data

@@ -34,9 +34,9 @@
             <input type="hidden" name="action" value="add_section">
             <div class="form-group">
                 <label for="section_title">Section Title</label>
-                <input id="section_title" name="section_title" type="text" placeholder="e.g., Fundamentals, Advanced Topics" required>
+                <input class="form-control" id="section_title" name="section_title" type="text" placeholder="e.g., Fundamentals, Advanced Topics" required>
             </div>
-            <button class="button" type="submit">+ Add Section</button>
+            <button class="button btn btn-primary" type="submit">+ Add Section</button>
         </form>
     </article>
 
@@ -80,7 +80,7 @@
             <input type="hidden" name="action" value="add_video">
             <div class="form-group">
                 <label for="section_id">Select Section *</label>
-                <select id="section_id" name="section_id" required>
+                <select class="form-select" id="section_id" name="section_id" required>
                     <option value="">Choose a section...</option>
                     {% for section in sections %}
                         <option value="{{ section.id }}">{{ section.title }}</option>
@@ -89,17 +89,17 @@
             </div>
             <div class="form-group">
                 <label for="video_title">Video Title *</label>
-                <input id="video_title" name="video_title" type="text" placeholder="e.g., Introduction to Variables" required>
+                <input class="form-control" id="video_title" name="video_title" type="text" placeholder="e.g., Introduction to Variables" required>
             </div>
             <div class="form-group">
                 <label for="video_url">Video URL *</label>
-                <input id="video_url" name="video_url" type="url" placeholder="https://youtube.com/..." required>
+                <input class="form-control" id="video_url" name="video_url" type="url" placeholder="https://youtube.com/..." required>
             </div>
             <div class="form-group">
                 <label for="duration_minutes">Duration (minutes) *</label>
-                <input id="duration_minutes" name="duration_minutes" type="number" min="1" value="10" required>
+                <input class="form-control" id="duration_minutes" name="duration_minutes" type="number" min="1" value="10" required>
             </div>
-            <button class="button" type="submit" style="grid-column: 1 / -1;">+ Add Lecture</button>
+            <button class="button btn btn-primary" type="submit" style="grid-column: 1 / -1;">+ Add Lecture</button>
         </form>
     </article>
 </section>
@@ -115,17 +115,17 @@
             <input type="hidden" name="action" value="add_note">
             <div class="form-group">
                 <label for="note_title">Material Title *</label>
-                <input id="note_title" name="note_title" type="text" placeholder="e.g., Chapter 1 Notes" required>
+                <input class="form-control" id="note_title" name="note_title" type="text" placeholder="e.g., Chapter 1 Notes" required>
             </div>
             <div class="form-group">
                 <label for="note_file_url">File URL (optional)</label>
-                <input id="note_file_url" name="note_file_url" type="url" placeholder="https://example.com/note.pdf">
+                <input class="form-control" id="note_file_url" name="note_file_url" type="url" placeholder="https://example.com/note.pdf">
             </div>
             <div class="form-group">
                 <label for="note_content">Material Content</label>
-                <textarea id="note_content" name="note_content" rows="5" placeholder="Write or paste your notes here..."></textarea>
+                <textarea class="form-control" id="note_content" name="note_content" rows="5" placeholder="Write or paste your notes here..."></textarea>
             </div>
-            <button class="button" type="submit" style="grid-column: 1 / -1;">+ Add Material</button>
+            <button class="button btn btn-primary" type="submit" style="grid-column: 1 / -1;">+ Add Material</button>
         </form>
     </article>
 
@@ -165,21 +165,21 @@
             <input type="hidden" name="action" value="add_test">
             <div class="form-group">
                 <label for="test_title">Test Title *</label>
-                <input id="test_title" name="test_title" type="text" placeholder="e.g., Quiz 1 - Basics" required>
+                <input class="form-control" id="test_title" name="test_title" type="text" placeholder="e.g., Quiz 1 - Basics" required>
             </div>
             <div class="form-group">
                 <label for="instructions">Instructions *</label>
-                <textarea id="instructions" name="instructions" rows="4" placeholder="Explain the test requirements and instructions..." required></textarea>
+                <textarea class="form-control" id="instructions" name="instructions" rows="4" placeholder="Explain the test requirements and instructions..." required></textarea>
             </div>
             <div class="form-group">
                 <label for="due_at">Due Date & Time *</label>
-                <input id="due_at" name="due_at" type="datetime-local" required>
+                <input class="form-control" id="due_at" name="due_at" type="datetime-local" required>
             </div>
             <div class="form-group">
                 <label for="max_score">Maximum Score *</label>
-                <input id="max_score" name="max_score" type="number" min="1" value="100" required>
+                <input class="form-control" id="max_score" name="max_score" type="number" min="1" value="100" required>
             </div>
-            <button class="button" type="submit" style="grid-column: 1 / -1;">+ Publish Assessment</button>
+            <button class="button btn btn-primary" type="submit" style="grid-column: 1 / -1;">+ Publish Assessment</button>
         </form>
     </article>
 

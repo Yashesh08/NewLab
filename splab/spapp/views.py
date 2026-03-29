@@ -7,10 +7,22 @@ from django.contrib.auth.models import Group, User
 from django.core.mail import send_mail
 from django.db.models import Avg, Count, Max, Min, Q
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
 
+from .forms import (
+    AdminCourseForm,
+    AdminInstructorForm,
+    CourseAssignmentForm,
+    CourseNoteForm,
+    CourseSectionForm,
+    CourseVideoForm,
+    InstructorCourseRequestForm,
+    LoginForm,
+    RegisterForm,
+    TestAttemptForm,
+)
 from .models import (
     Assignment,
     AssignmentSubmission,
@@ -710,14 +722,18 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
+    form = LoginForm(request.POST or None)
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip().lower()
-        password = request.POST.get('password', '')
-
-        if not email or not password:
+        if not form.is_valid():
             messages.error(request, 'Please enter both email and password.')
-            return render(request, 'login.html', {'active_page': 'login', 'email': email})
+            return render(
+                request,
+                'login.html',
+                {'active_page': 'login', 'email': request.POST.get('email', '').strip().lower()},
+            )
 
+        email = form.cleaned_data['email'].strip().lower()
+        password = form.cleaned_data['password']
         user = authenticate(request, username=email, password=password)
         if user is None:
             messages.error(request, 'Invalid credentials. Please try again.')
@@ -739,38 +755,19 @@ def register_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
+    form = RegisterForm(request.POST or None)
     if request.method == 'POST':
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        email = request.POST.get('email', '').strip().lower()
-        user_type = request.POST.get('user_type', 'user').strip().lower()
-        password = request.POST.get('password', '')
-        confirm_password = request.POST.get('confirm_password', '')
+        if not form.is_valid():
+            for _, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+            return render(request, 'register.html', {'active_page': 'register', **request.POST.dict()})
 
-        register_context = {
-            'active_page': 'register',
-            'first_name': first_name,
-            'last_name': last_name,
-            'email': email,
-            'user_type': user_type,
-        }
-
-        allowed_user_types = {'user', 'instructor', 'admin'}
-        if user_type not in allowed_user_types:
-            messages.error(request, 'Please choose a valid account type.')
-            return render(request, 'register.html', register_context)
-
-        if not all([first_name, last_name, email, password, confirm_password]):
-            messages.error(request, 'Please fill all required fields.')
-            return render(request, 'register.html', register_context)
-
-        if password != confirm_password:
-            messages.error(request, 'Passwords do not match.')
-            return render(request, 'register.html', register_context)
-
-        if User.objects.filter(username=email).exists() or User.objects.filter(email=email).exists():
-            messages.error(request, 'An account with this email already exists.')
-            return render(request, 'register.html', register_context)
+        first_name = form.cleaned_data['first_name'].strip()
+        last_name = form.cleaned_data['last_name'].strip()
+        email = form.cleaned_data['email'].strip().lower()
+        user_type = form.cleaned_data['user_type'].strip().lower()
+        password = form.cleaned_data['password']
 
         user = User.objects.create_user(
             username=email,
@@ -953,40 +950,19 @@ def delete_user(request, user_id):
     return redirect('admin_panel')
 @user_passes_test(_is_instructor, login_url='home', redirect_field_name=None)
 def instructor_panel(request):
+    course_request_form = InstructorCourseRequestForm(request.POST or None)
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'create_course_request':
-            title = request.POST.get('title', '').strip()
-            category = request.POST.get('category', '').strip()
-            short_description = request.POST.get('short_description', '').strip()
-            description = request.POST.get('description', '').strip()
-            level = request.POST.get('level', Course.Level.BEGINNER)
-            duration_weeks = request.POST.get('duration_weeks', '1').strip()
-            price = request.POST.get('price', '0').strip()
-
-            if not all([title, category, short_description]):
-                messages.error(request, 'Title, category, and short description are required.')
-                return redirect('instructor_panel')
-            try:
-                duration_weeks_value = max(1, int(duration_weeks))
-                price_value = max(0, float(price))
-            except ValueError:
-                messages.error(request, 'Duration and price must be valid numbers.')
+            if not course_request_form.is_valid():
+                for _, errors in course_request_form.errors.items():
+                    for error in errors:
+                        messages.error(request, error)
                 return redirect('instructor_panel')
 
-            course = Course.objects.create(
-                title=title,
-                slug=_generate_unique_slug(title),
-                category=category,
-                short_description=short_description,
-                description=description,
-                level=level if level in Course.Level.values else Course.Level.BEGINNER,
-                duration_weeks=duration_weeks_value,
-                price=price_value,
-                is_published=False,
-                approval_status=Course.ApprovalStatus.PENDING,
-                created_by=request.user,
-            )
+            course = course_request_form.save(commit=False)
+            course.created_by = request.user
+            course.save()
             instructor_name = request.user.get_full_name().strip()
             if instructor_name:
                 instructor = Instructor.objects.filter(name__iexact=instructor_name, is_active=True).first()
@@ -1034,76 +1010,56 @@ def manage_instructor_course(request, course_id):
         action = request.POST.get('action')
 
         if action == 'add_section':
-            section_title = request.POST.get('section_title', '').strip()
-            if section_title:
+            section_form = CourseSectionForm(request.POST)
+            if section_form.is_valid():
                 next_order = (course.sections.aggregate(max_order=Max('order')).get('max_order') or 0) + 1
-                CourseSection.objects.create(course=course, title=section_title, order=next_order)
+                CourseSection.objects.create(course=course, title=section_form.cleaned_data['section_title'], order=next_order)
                 messages.success(request, 'Section added successfully.')
             else:
                 messages.error(request, 'Section title is required.')
 
         elif action == 'add_video':
-            section_id = request.POST.get('section_id')
-            title = request.POST.get('video_title', '').strip()
-            video_url = request.POST.get('video_url', '').strip()
-            duration = request.POST.get('duration_minutes', '1').strip()
-
-            section = course.sections.filter(id=section_id).first()
-            if not section or not title or not video_url:
+            video_form = CourseVideoForm(request.POST)
+            section = course.sections.filter(id=request.POST.get('section_id')).first()
+            if not section or not video_form.is_valid():
                 messages.error(request, 'Section, title, and video URL are required for lecture.')
             else:
-                try:
-                    duration_value = max(1, int(duration))
-                except ValueError:
-                    duration_value = 1
                 next_order = section.lectures.count() + 1
                 VideoLecture.objects.create(
                     section=section,
-                    title=title,
-                    video_url=video_url,
-                    duration_minutes=duration_value,
+                    title=video_form.cleaned_data['video_title'],
+                    video_url=video_form.cleaned_data['video_url'],
+                    duration_minutes=video_form.cleaned_data.get('duration_minutes') or 1,
                     order=next_order,
                 )
                 messages.success(request, 'Video lecture added.')
 
         elif action == 'add_note':
-            note_title = request.POST.get('note_title', '').strip()
-            note_content = request.POST.get('note_content', '').strip()
-            note_file_url = request.POST.get('note_file_url', '').strip()
-            if not note_title:
+            note_form = CourseNoteForm(request.POST)
+            if not note_form.is_valid():
                 messages.error(request, 'Material title is required.')
             else:
-                CourseNote.objects.create(course=course, title=note_title, content=note_content, file_url=note_file_url)
+                CourseNote.objects.create(
+                    course=course,
+                    title=note_form.cleaned_data['note_title'],
+                    content=note_form.cleaned_data.get('note_content', ''),
+                    file_url=note_form.cleaned_data.get('note_file_url', ''),
+                )
                 messages.success(request, 'Material added successfully.')
 
         elif action == 'add_test':
-            test_title = request.POST.get('test_title', '').strip()
-            instructions = request.POST.get('instructions', '').strip()
-            due_at_raw = request.POST.get('due_at', '').strip()
-            max_score_raw = request.POST.get('max_score', '100').strip()
-
-            if not all([test_title, instructions, due_at_raw]):
-                messages.error(request, 'Test title, instructions, and due date are required.')
-            else:
-                try:
-                    due_at = timezone.datetime.fromisoformat(due_at_raw)
-                    due_at = timezone.make_aware(due_at) if timezone.is_naive(due_at) else due_at
-                except ValueError:
-                    messages.error(request, 'Invalid due date format.')
-                    return redirect('manage_instructor_course', course_id=course.id)
-
-                try:
-                    max_score = max(1, int(max_score_raw))
-                except ValueError:
-                    max_score = 100
+            assignment_form = CourseAssignmentForm(request.POST)
+            if assignment_form.is_valid():
                 Assignment.objects.create(
                     course=course,
-                    title=test_title,
-                    instructions=instructions,
-                    due_at=due_at,
-                    max_score=max_score,
+                    title=assignment_form.cleaned_data['test_title'],
+                    instructions=assignment_form.cleaned_data['instructions'],
+                    due_at=assignment_form.cleaned_data['due_at'],
+                    max_score=assignment_form.cleaned_data.get('max_score') or 100,
                 )
                 messages.success(request, 'Test added successfully.')
+            else:
+                messages.error(request, 'Test title, instructions, and valid due date are required.')
 
         return redirect('manage_instructor_course', course_id=course.id)
 
@@ -1130,10 +1086,8 @@ def attempt_test(request, slug, assignment_id):
     if not assignment:
         raise Http404('Test not found')
 
-    answer_text = request.POST.get('answer_text', '').strip()
-    submission_url = request.POST.get('submission_url', '').strip()
-
-    if not answer_text and not submission_url:
+    attempt_form = TestAttemptForm(request.POST)
+    if not attempt_form.is_valid():
         messages.error(request, 'Please provide an answer text or submission URL.')
         return redirect('my_course_detail', slug=slug)
 
@@ -1141,8 +1095,8 @@ def attempt_test(request, slug, assignment_id):
         assignment=assignment,
         user=request.user,
         defaults={
-            'remarks': answer_text,
-            'submission_url': submission_url,
+            'remarks': attempt_form.cleaned_data.get('answer_text', '').strip(),
+            'submission_url': attempt_form.cleaned_data.get('submission_url', '').strip(),
             'status': AssignmentSubmission.Status.SUBMITTED,
         },
     )
