@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}LearnSphere{% endblock %}</title>
+    <title>{% block title %}{{ platform_name|default:"LearnSphere" }}{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     {% block extra_css %}{% endblock %}
 
@@ -13,7 +13,7 @@
 <body>
 <div class="container">
     <nav class="navbar">
-        <a href="{% url 'home' %}" class="logo">LearnSphere</a>
+        <a href="{% url 'home' %}" class="logo">{{ platform_name|default:"LearnSphere" }}</a>
         <div class="nav-links">
             <a href="{% url 'home' %}" class="{% if active_page == 'home' %}active{% endif %}">Home</a>
             <a href="{% url 'courses' %}" class="{% if active_page == 'courses' %}active{% endif %}">Courses</a>

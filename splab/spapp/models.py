@@ -154,3 +154,14 @@ class LiveMeet(TimeStampedModel):
 
     def __str__(self):
         return f'{self.course.title}: {self.topic}'
+
+
+class PlatformSettings(TimeStampedModel):
+    platform_name = models.CharField(max_length=120, default='LearnSphere')
+    courses_visible = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = 'Platform settings'
+
+    def __str__(self):
+        return 'Platform Settings'

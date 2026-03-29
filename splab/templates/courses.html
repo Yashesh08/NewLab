@@ -32,16 +32,22 @@
     <h2 class="section-title">Browse Courses</h2>
     <p class="section-subtitle">Search and filter by category, then open a course page from Enroll.</p>
 
-    <div class="controls">
-        <input id="searchInput" type="text" placeholder="Search courses...">
-        <select id="categoryFilter">
-            <option value="All">All Categories</option>
-            <option value="Development">Development</option>
-            <option value="Design">Design</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Data">Data</option>
-        </select>
-    </div>
+    {% if not courses_visible %}
+        <p class="muted">Course browsing is currently disabled by the admin.</p>
+    {% endif %}
+
+    {% if courses_visible %}
+        <div class="controls">
+            <input id="searchInput" type="text" placeholder="Search courses...">
+            <select id="categoryFilter">
+                <option value="All">All Categories</option>
+                <option value="Development">Development</option>
+                <option value="Design">Design</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Data">Data</option>
+            </select>
+        </div>
+    {% endif %}
 
     <div id="courseList" class="list">
         {% for course in courses %}
@@ -86,20 +92,24 @@
     const categoryFilter = document.getElementById('categoryFilter');
     const cards = Array.from(document.querySelectorAll('#courseList .item'));
 
-    function filterCourses() {
-        const query = searchInput.value.toLowerCase().trim();
-        const category = categoryFilter.value;
+    if (!searchInput || !categoryFilter) {
+        // Course visibility may be disabled.
+    } else {
+        function filterCourses() {
+            const query = searchInput.value.toLowerCase().trim();
+            const category = categoryFilter.value;
 
-        cards.forEach((card) => {
-            const title = card.dataset.title;
-            const itemCategory = card.dataset.category;
-            const matchQuery = title.includes(query);
-            const matchCategory = category === 'All' || itemCategory === category;
-            card.style.display = (matchQuery && matchCategory) ? 'grid' : 'none';
-        });
+            cards.forEach((card) => {
+                const title = card.dataset.title;
+                const itemCategory = card.dataset.category;
+                const matchQuery = title.includes(query);
+                const matchCategory = category === 'All' || itemCategory === category;
+                card.style.display = (matchQuery && matchCategory) ? 'grid' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', filterCourses);
+        categoryFilter.addEventListener('change', filterCourses);
     }
-
-    searchInput.addEventListener('input', filterCourses);
-    categoryFilter.addEventListener('change', filterCourses);
 </script>
 {% endblock %}
