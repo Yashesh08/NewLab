@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
@@ -496,6 +497,213 @@ def dashboard(request):
         'high_priority_count': high_priority_count,
     }
     return render(request, 'dashboard.html', context)
+
+
+def _handle_admin_panel_action(request):
+    action = request.POST.get('action')
+
+    if action in {'promote_instructor', 'revoke_instructor'}:
+        user = get_object_or_404(User, id=request.POST.get('user_id'))
+        if user == request.user and action == 'revoke_instructor':
+            messages.error(request, 'You cannot revoke your own instructor access from this panel.')
+            return
+
+        user.is_staff = action == 'promote_instructor'
+        user.save(update_fields=['is_staff'])
+        role_label = 'Instructor' if user.is_staff else 'Student'
+        messages.success(request, f'{user.get_full_name() or user.username} is now marked as {role_label}.')
+
+
+@staff_member_required(login_url='login')
+def admin_panel(request):
+    if request.method == 'POST':
+        _handle_admin_panel_action(request)
+        return redirect('admin_panel')
+
+    instructors_list = InstructorProfile.objects.select_related('user').order_by('user__first_name', 'user__last_name')
+    students_list = User.objects.filter(is_staff=False).annotate(total_enrollments=Count('enrollments')).order_by(
+        '-date_joined'
+    )
+
+    context = {
+        'active_page': 'admin_panel',
+        'stats': {
+            'total_courses': Course.objects.count(),
+            'total_instructors': instructors_list.count(),
+            'total_students': students_list.count(),
+            'total_enrollments': Enrollment.objects.count(),
+        },
+        'instructors': instructors_list[:8],
+        'students': students_list[:12],
+    }
+    return render(request, 'admin_panel.html', context)
+
+
+@staff_member_required(login_url='login')
+def admin_course_list(request):
+    courses_qs = Course.objects.select_related('instructor').order_by('title')
+    return render(
+        request,
+        'admin_courses.html',
+        {'active_page': 'admin_panel', 'courses': courses_qs},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_course_create(request):
+    if request.method == 'POST':
+        form = AdminCourseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Course created successfully.')
+            return redirect('admin_courses')
+    else:
+        form = AdminCourseForm()
+
+    return render(
+        request,
+        'admin_course_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Add New Course', 'submit_label': 'Create Course'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_course_edit(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if request.method == 'POST':
+        form = AdminCourseForm(request.POST, instance=course)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Course updated successfully.')
+            return redirect('admin_courses')
+    else:
+        form = AdminCourseForm(instance=course)
+
+    return render(
+        request,
+        'admin_course_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Edit Course', 'submit_label': 'Save Changes'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_course_delete(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if request.method == 'POST':
+        course.delete()
+        messages.success(request, 'Course deleted successfully.')
+    return redirect('admin_courses')
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_list(request):
+    instructors_qs = InstructorProfile.objects.select_related('user').order_by('user__first_name', 'user__last_name')
+    return render(
+        request,
+        'admin_instructors.html',
+        {'active_page': 'admin_panel', 'instructors': instructors_qs},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_create(request):
+    if request.method == 'POST':
+        form = AdminInstructorForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Instructor added successfully.')
+            return redirect('admin_instructors')
+    else:
+        form = AdminInstructorForm()
+
+    return render(
+        request,
+        'admin_instructor_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Add Instructor', 'submit_label': 'Create Instructor'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_edit(request, instructor_id):
+    profile = get_object_or_404(InstructorProfile, id=instructor_id)
+    if request.method == 'POST':
+        form = AdminInstructorForm(request.POST, instance=profile, user_instance=profile.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Instructor details updated successfully.')
+            return redirect('admin_instructors')
+    else:
+        form = AdminInstructorForm(instance=profile, user_instance=profile.user)
+
+    return render(
+        request,
+        'admin_instructor_form.html',
+        {'active_page': 'admin_panel', 'form': form, 'form_title': 'Edit Instructor', 'submit_label': 'Save Changes'},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_instructor_delete(request, instructor_id):
+    profile = get_object_or_404(InstructorProfile, id=instructor_id)
+    if request.method == 'POST':
+        if profile.user == request.user:
+            messages.error(request, 'You cannot delete your own instructor account.')
+            return redirect('admin_instructors')
+
+        profile.user.delete()
+        messages.success(request, 'Instructor deleted successfully.')
+    return redirect('admin_instructors')
+
+
+@staff_member_required(login_url='login')
+def admin_enrollment_list(request):
+    enrollments = Enrollment.objects.select_related('user', 'course').order_by('-enrolled_on', '-created_at')
+    return render(
+        request,
+        'admin_enrollments.html',
+        {'active_page': 'admin_panel', 'enrollments': enrollments},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_student_list(request):
+    students_qs = User.objects.filter(is_staff=False).annotate(total_enrollments=Count('enrollments')).order_by('-date_joined')
+    return render(
+        request,
+        'admin_students.html',
+        {'active_page': 'admin_panel', 'students': students_qs},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_student_detail(request, student_id):
+    student = get_object_or_404(User.objects.filter(is_staff=False), id=student_id)
+    enrollments = Enrollment.objects.select_related('course').filter(user=student).order_by('-created_at')
+    return render(
+        request,
+        'admin_student_detail.html',
+        {'active_page': 'admin_panel', 'student': student, 'enrollments': enrollments},
+    )
+
+
+@staff_member_required(login_url='login')
+def admin_student_deactivate(request, student_id):
+    student = get_object_or_404(User.objects.filter(is_staff=False), id=student_id)
+    if request.method == 'POST':
+        student.is_active = not student.is_active
+        student.save(update_fields=['is_active'])
+        status_text = 'activated' if student.is_active else 'deactivated'
+        messages.success(request, f'Student account {status_text} successfully.')
+    return redirect('admin_students')
+
+
+@staff_member_required(login_url='login')
+def admin_student_delete(request, student_id):
+    student = get_object_or_404(User.objects.filter(is_staff=False), id=student_id)
+    if request.method == 'POST':
+        student.delete()
+        messages.success(request, 'Student account deleted successfully.')
+    return redirect('admin_students')
 
 
 def login_view(request):

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Instructor Management{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; gap: 12px;">
+    <div>
+        <h1 class="section-title">Instructor Management</h1>
+        <p class="section-subtitle" style="margin-bottom:0;">View, add, edit, and delete instructor profiles.</p>
+    </div>
+    <a href="{% url 'admin_instructor_create' %}" class="button">Add Instructor</a>
+</section>
+
+<section class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Expertise</th>
+                <th>Experience</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for instructor in instructors %}
+            <tr>
+                <td>{{ instructor.user.get_full_name|default:instructor.user.username }}</td>
+                <td>{{ instructor.expertise }}</td>
+                <td>{{ instructor.experience }}</td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{% url 'admin_instructor_edit' instructor.id %}" class="button button-muted">Edit</a>
+                        <form method="post" action="{% url 'admin_instructor_delete' instructor.id %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="button button-danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No instructors found. Add your first instructor.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

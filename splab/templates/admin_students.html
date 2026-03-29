@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Student Management{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; gap: 12px;">
+    <div>
+        <h1 class="section-title">Student Management</h1>
+        <p class="section-subtitle" style="margin-bottom:0;">View registered students, inspect details, and manage account status.</p>
+    </div>
+    <a href="{% url 'admin_panel' %}" class="button button-muted">Back to Dashboard</a>
+</section>
+
+<section class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Enrollments</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.get_full_name|default:student.username }}</td>
+                <td>{{ student.email }}</td>
+                <td>{% if student.is_active %}<span class="pill success">Active</span>{% else %}<span class="pill danger">Inactive</span>{% endif %}</td>
+                <td>{{ student.total_enrollments }}</td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{% url 'admin_student_detail' student.id %}" class="button button-muted">Details</a>
+                        <form method="post" action="{% url 'admin_student_deactivate' student.id %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="button">{% if student.is_active %}Deactivate{% else %}Activate{% endif %}</button>
+                        </form>
+                        <form method="post" action="{% url 'admin_student_delete' student.id %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="button button-danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No students registered yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}LearnSphere - Student Details{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom:16px;">
+    <h1 class="section-title">Student Details</h1>
+    <p class="section-subtitle">Review student profile and enrollment activity.</p>
+    <div class="grid grid-2">
+        <div>
+            <p><strong>Name:</strong> {{ student.get_full_name|default:student.username }}</p>
+            <p><strong>Email:</strong> {{ student.email }}</p>
+            <p><strong>Status:</strong> {% if student.is_active %}Active{% else %}Inactive{% endif %}</p>
+        </div>
+        <div>
+            <p><strong>Joined:</strong> {{ student.date_joined|date:"M d, Y" }}</p>
+            <p><strong>Total Enrollments:</strong> {{ enrollments|length }}</p>
+        </div>
+    </div>
+    <div class="table-actions" style="margin-top:14px;">
+        <a href="{% url 'admin_students' %}" class="button button-muted">Back to Students</a>
+        <form method="post" action="{% url 'admin_student_deactivate' student.id %}" class="inline-form">
+            {% csrf_token %}
+            <button type="submit" class="button">{% if student.is_active %}Deactivate{% else %}Activate{% endif %} Account</button>
+        </form>
+    </div>
+</section>
+
+<section class="card">
+    <h2 class="section-title" style="font-size:1.3rem;">Enrollments</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Status</th>
+                <th>Progress</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for enrollment in enrollments %}
+            <tr>
+                <td>{{ enrollment.course.title }}</td>
+                <td>{{ enrollment.get_status_display }}</td>
+                <td>{{ enrollment.progress_percent }}%</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">No enrollments found for this student.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
