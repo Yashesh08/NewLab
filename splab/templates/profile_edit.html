@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile | {{ platform_name|default:"LearnSphere" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="card profile-card">
+    <div class="profile-header">
+        <div>
+            <h1 class="section-title">Edit Profile</h1>
+            <p class="section-subtitle">Update your details and save changes to your account.</p>
+        </div>
+        <a href="{% url 'profile' %}" class="button secondary">Back to Profile</a>
+    </div>
+
+    <form method="post" class="profile-form">
+        {% csrf_token %}
+        <div class="profile-grid">
+            <label class="profile-field">
+                <span class="field-label">First Name</span>
+                <input type="text" name="first_name" value="{{ user_obj.first_name }}" required>
+            </label>
+            <label class="profile-field">
+                <span class="field-label">Last Name</span>
+                <input type="text" name="last_name" value="{{ user_obj.last_name }}" required>
+            </label>
+            <label class="profile-field profile-field-full">
+                <span class="field-label">Email</span>
+                <input type="email" name="email" value="{{ user_obj.email }}" required>
+            </label>
+
+            <div class="profile-field profile-field-full role-note">
+                <span class="field-label">Role</span>
+                <p class="field-value readonly">
+                    {% if user_role == 'admin' %}
+                        Admin
+                    {% elif user_role == 'instructor' %}
+                        Instructor
+                    {% else %}
+                        Student
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if user_role == 'instructor' %}
+                <label class="profile-field">
+                    <span class="field-label">Instructor Title</span>
+                    <input type="text" name="title" value="{{ instructor_profile.title|default:'Instructor' }}" required>
+                </label>
+                <label class="profile-field profile-field-full">
+                    <span class="field-label">Instructor Bio</span>
+                    <textarea name="bio" rows="4" required>{{ instructor_profile.bio|default:'Auto-created instructor profile.' }}</textarea>
+                </label>
+            {% endif %}
+        </div>
+
+        <div class="actions-row">
+            <button type="submit" class="button">Save Changes</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
