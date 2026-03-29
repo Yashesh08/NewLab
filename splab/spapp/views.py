@@ -413,6 +413,84 @@ def dashboard(request):
     return render(request, 'dashboard.html', context)
 
 
+@login_required(login_url='login')
+def profile_view(request):
+    user_role = _get_user_role(request.user)
+    instructor_profile = None
+    if user_role == 'instructor':
+        instructor_profile = Instructor.objects.filter(name__iexact=request.user.get_full_name()).first()
+
+    context = {
+        'active_page': 'profile',
+        'user_role': user_role,
+        'user_obj': request.user,
+        'instructor_profile': instructor_profile,
+    }
+    return render(request, 'profile.html', context)
+
+
+@login_required(login_url='login')
+def edit_profile(request):
+    user_role = _get_user_role(request.user)
+    instructor_profile = None
+    if user_role == 'instructor':
+        instructor_profile = Instructor.objects.filter(name__iexact=request.user.get_full_name()).first()
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip().lower()
+
+        if not all([first_name, last_name, email]):
+            messages.error(request, 'First name, last name, and email are required.')
+            return redirect('edit_profile')
+
+        email_in_use = User.objects.filter(email=email).exclude(id=request.user.id).exists()
+        if email_in_use:
+            messages.error(request, 'This email is already in use by another account.')
+            return redirect('edit_profile')
+
+        previous_full_name = request.user.get_full_name()
+
+        request.user.first_name = first_name
+        request.user.last_name = last_name
+        request.user.email = email
+        request.user.username = email
+        request.user.save(update_fields=['first_name', 'last_name', 'email', 'username'])
+
+        if user_role == 'instructor':
+            title = request.POST.get('title', '').strip() or 'Instructor'
+            bio = request.POST.get('bio', '').strip() or 'Auto-created instructor profile.'
+            current_full_name = request.user.get_full_name()
+
+            if instructor_profile is None and current_full_name:
+                instructor_profile, _ = Instructor.objects.get_or_create(
+                    name=current_full_name,
+                    defaults={'title': title, 'bio': bio},
+                )
+            elif instructor_profile is not None:
+                instructor_profile.name = current_full_name or instructor_profile.name
+                instructor_profile.title = title
+                instructor_profile.bio = bio
+                instructor_profile.save(update_fields=['name', 'title', 'bio', 'updated_at'])
+
+            if previous_full_name and current_full_name and previous_full_name != current_full_name:
+                Instructor.objects.filter(name__iexact=previous_full_name).exclude(id=getattr(instructor_profile, 'id', None)).update(
+                    name=current_full_name
+                )
+
+        messages.success(request, 'Profile updated successfully.')
+        return redirect('profile')
+
+    context = {
+        'active_page': 'profile',
+        'user_role': user_role,
+        'user_obj': request.user,
+        'instructor_profile': instructor_profile,
+    }
+    return render(request, 'profile_edit.html', context)
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
