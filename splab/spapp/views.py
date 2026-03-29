@@ -922,7 +922,10 @@ def admin_panel(request):
 @user_passes_test(_is_admin, login_url='home', redirect_field_name=None)
 def delete_user(request, user_id):
     """Delete a user from the system."""
-    
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method for deleting a user.')
+        return redirect('admin_panel')
+
     user_to_delete = User.objects.filter(id=user_id).first()
     
     if not user_to_delete:
@@ -947,6 +950,30 @@ def delete_user(request, user_id):
     user_to_delete.delete()
     
     messages.success(request, f'User "{user_name}" ({user_email}) has been successfully deleted.')
+    return redirect('admin_panel')
+
+
+@login_required(login_url='login')
+@user_passes_test(_is_admin, login_url='home', redirect_field_name=None)
+def toggle_user_status(request, user_id):
+    """Toggle a user active/inactive state."""
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method for updating user status.')
+        return redirect('admin_panel')
+
+    user_to_update = User.objects.filter(id=user_id).first()
+    if not user_to_update:
+        messages.error(request, 'User not found.')
+        return redirect('admin_panel')
+
+    if user_to_update.id == request.user.id:
+        messages.error(request, 'You cannot deactivate your own admin account.')
+        return redirect('admin_panel')
+
+    user_to_update.is_active = not user_to_update.is_active
+    user_to_update.save(update_fields=['is_active'])
+    current_state = 'activated' if user_to_update.is_active else 'deactivated'
+    messages.success(request, f'User "{user_to_update.get_full_name() or user_to_update.username}" has been {current_state}.')
     return redirect('admin_panel')
 @user_passes_test(_is_instructor, login_url='home', redirect_field_name=None)
 def instructor_panel(request):

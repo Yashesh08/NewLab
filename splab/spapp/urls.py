@@ -12,6 +12,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('admin-panel/', views.admin_panel, name='admin_panel'),
     path('admin-panel/delete-user/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('admin-panel/toggle-user-status/<int:user_id>/', views.toggle_user_status, name='toggle_user_status'),
     path('instructor-panel/', views.instructor_panel, name='instructor_panel'),
     path('instructor-panel/course/<int:course_id>/manage/', views.manage_instructor_course, name='manage_instructor_course'),
     path('my-courses/<slug:slug>/tests/<int:assignment_id>/attempt/', views.attempt_test, name='attempt_test'),
