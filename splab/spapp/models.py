@@ -10,11 +10,29 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class Instructor(TimeStampedModel):
+    name = models.CharField(max_length=120)
+    title = models.CharField(max_length=140)
+    bio = models.TextField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Course(TimeStampedModel):
     class Level(models.TextChoices):
         BEGINNER = 'beginner', 'Beginner'
         INTERMEDIATE = 'intermediate', 'Intermediate'
         ADVANCED = 'advanced', 'Advanced'
+
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
 
     title = models.CharField(max_length=180)
     slug = models.SlugField(max_length=220, unique=True)
@@ -32,6 +50,19 @@ class Course(TimeStampedModel):
         related_name='courses_taught',
     )
     is_published = models.BooleanField(default=True)
+    approval_status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.APPROVED,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_courses',
+    )
+    instructors = models.ManyToManyField(Instructor, blank=True, related_name='courses')
 
     class Meta:
         ordering = ['title']

@@ -22,28 +22,69 @@
                 </div>
                 <a class="button" href="{% url 'my_course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Open Course</a>
             </article>
+        {% empty %}
+            <p class="muted">No purchased courses yet. Enroll in a course to see it here.</p>
         {% endfor %}
     </div>
 </section>
 
 <section class="card">
     <h2 class="section-title">Browse Courses</h2>
-    <p class="section-subtitle">Search and filter by category, then open a course page from Enroll.</p>
+    <p class="section-subtitle">Search, filter, and sort courses before you enroll.</p>
 
-    <div class="controls">
-        <input id="searchInput" type="text" placeholder="Search courses...">
-        <select id="categoryFilter">
-            <option value="All">All Categories</option>
-            <option value="Development">Development</option>
-            <option value="Design">Design</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Data">Data</option>
+    <form method="get" class="controls">
+        <input
+            name="q"
+            type="text"
+            placeholder="Search by title, category, or keyword..."
+            value="{{ search_query }}"
+        >
+
+        <select name="category">
+            <option value="All" {% if selected_category == 'All' %}selected{% endif %}>All Categories</option>
+            {% for category in categories %}
+                <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
         </select>
-    </div>
+
+        <select name="level">
+            <option value="All" {% if selected_level == 'All' %}selected{% endif %}>All Levels</option>
+            {% for level in level_choices %}
+                <option value="{{ level.value }}" {% if selected_level == level.value %}selected{% endif %}>{{ level.label }}</option>
+            {% endfor %}
+        </select>
+
+        <input
+            name="max_price"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Max price ($)"
+            value="{{ selected_max_price }}"
+        >
+
+        <select name="sort">
+            <option value="title_asc" {% if sort_by == 'title_asc' %}selected{% endif %}>Sort: Title (A-Z)</option>
+            <option value="title_desc" {% if sort_by == 'title_desc' %}selected{% endif %}>Sort: Title (Z-A)</option>
+            <option value="price_low_high" {% if sort_by == 'price_low_high' %}selected{% endif %}>Price: Low to High</option>
+            <option value="price_high_low" {% if sort_by == 'price_high_low' %}selected{% endif %}>Price: High to Low</option>
+            <option value="duration_short_long" {% if sort_by == 'duration_short_long' %}selected{% endif %}>Duration: Short to Long</option>
+            <option value="duration_long_short" {% if sort_by == 'duration_long_short' %}selected{% endif %}>Duration: Long to Short</option>
+        </select>
+
+        <button type="submit" class="button">Apply</button>
+    </form>
+
+    <p class="muted" style="margin-top: 10px;">
+        Showing {{ result_count }} course{{ result_count|pluralize }}.
+        {% if price_bounds.max %}
+            Price range: ${{ price_bounds.min }} to ${{ price_bounds.max }}.
+        {% endif %}
+    </p>
 
     <div id="courseList" class="list">
         {% for course in courses %}
-            <article class="item" data-title="{{ course.title|lower }}" data-category="{{ course.category }}">
+            <article class="item">
                 <span class="pill {% if course.level == 'Beginner' %}success{% elif course.level == 'Intermediate' %}warning{% else %}danger{% endif %}">{{ course.level }}</span>
                 <div>
                     <h3>{{ course.title }}</h3>
@@ -51,6 +92,8 @@
                 </div>
                 <a class="button" href="{% url 'course_detail' course.slug %}" style="text-decoration:none; display:inline-block; text-align:center;">Enroll</a>
             </article>
+        {% empty %}
+            <p class="muted">No courses match your filters. Try widening your search criteria.</p>
         {% endfor %}
     </div>
 </section>
@@ -76,28 +119,4 @@
         </div>
     </div>
 </section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    const searchInput = document.getElementById('searchInput');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const cards = Array.from(document.querySelectorAll('#courseList .item'));
-
-    function filterCourses() {
-        const query = searchInput.value.toLowerCase().trim();
-        const category = categoryFilter.value;
-
-        cards.forEach((card) => {
-            const title = card.dataset.title;
-            const itemCategory = card.dataset.category;
-            const matchQuery = title.includes(query);
-            const matchCategory = category === 'All' || itemCategory === category;
-            card.style.display = (matchQuery && matchCategory) ? 'grid' : 'none';
-        });
-    }
-
-    searchInput.addEventListener('input', filterCourses);
-    categoryFilter.addEventListener('change', filterCourses);
-</script>
 {% endblock %}
