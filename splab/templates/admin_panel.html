@@ -591,4 +591,54 @@
         {% endif %}
     </div>
 </section>
+
+<!-- Enrollment Monitoring Section -->
+<section class="admin-form-section" style="padding: 28px;">
+    <div class="section-header">
+        <span class="section-header-icon">📋</span>
+        <h2>Enrollment Monitoring</h2>
+    </div>
+    <p class="section-subtitle" style="color: #6b7280; margin-bottom: 20px;">View all course enrollments with student and enrollment date</p>
+
+    <div class="users-table-wrapper">
+        {% if enrollment_rows %}
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Email</th>
+                    <th>Course</th>
+                    <th>Status</th>
+                    <th>Enrollment Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for enrollment in enrollment_rows %}
+                <tr>
+                    <td>
+                        <span class="user-name">{{ enrollment.user.get_full_name|default:enrollment.user.username }}</span>
+                    </td>
+                    <td>
+                        <span class="user-email">{{ enrollment.user.email }}</span>
+                    </td>
+                    <td>
+                        <span class="list-item-title">{{ enrollment.course.title }}</span>
+                    </td>
+                    <td>
+                        <span class="user-role student">{{ enrollment.get_status_display }}</span>
+                    </td>
+                    <td>
+                        <span class="user-joined">{{ enrollment.enrolled_on|date:'M d, Y' }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No enrollments found yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
 {% endblock %}
