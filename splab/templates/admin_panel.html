@@ -23,6 +23,18 @@
         opacity: 0.9;
     }
 
+    .hero-link {
+        display: inline-block;
+        margin-top: 16px;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 10px;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
     /* Stats Cards */
     .stats-grid {
         display: grid;
@@ -388,6 +400,7 @@
 <section class="admin-hero">
     <h1>🛡️ Admin Dashboard</h1>
     <p>Manage courses, users, and platform settings</p>
+    <a class="hero-link" href="{% url 'admin_settings' %}">⚙️ System Settings</a>
 </section>
 
 <!-- Statistics Cards -->

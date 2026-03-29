@@ -11,7 +11,17 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
-from .models import Assignment, AssignmentSubmission, Course, CourseNote, CourseSection, Enrollment, Instructor, VideoLecture
+from .models import (
+    Assignment,
+    AssignmentSubmission,
+    Course,
+    CourseNote,
+    CourseSection,
+    Enrollment,
+    Instructor,
+    PlatformSettings,
+    VideoLecture,
+)
 
 
 HOME_FEATURES = [
@@ -137,12 +147,31 @@ def _get_instructor_courses(user):
     )
 
 def get_course(slug):
-    course = Course.objects.filter(is_published=True).prefetch_related('instructors').get(slug=slug)
+    settings_obj = _get_platform_settings()
+    queryset = Course.objects.filter(is_published=True)
+    if not settings_obj.courses_visible:
+        queryset = queryset.none()
+    course = queryset.prefetch_related('instructors').get(slug=slug)
     return course
 
 
+def _get_platform_settings():
+    settings_obj, _ = PlatformSettings.objects.get_or_create(
+        pk=1,
+        defaults={
+            'platform_name': 'LearnSphere',
+            'courses_visible': True,
+        },
+    )
+    return settings_obj
+
+
 def home(request):
-    courses = list(Course.objects.filter(is_published=True).order_by('title'))
+    settings_obj = _get_platform_settings()
+    courses_queryset = Course.objects.filter(is_published=True)
+    if not settings_obj.courses_visible:
+        courses_queryset = courses_queryset.none()
+    courses = list(courses_queryset.order_by('title'))
     featured_courses = courses[:3]
 
     badge_class_by_level = {
@@ -196,7 +225,11 @@ def home(request):
 
 
 def courses(request):
-    queryset = Course.objects.filter(is_published=True).order_by('title')
+    settings_obj = _get_platform_settings()
+    queryset = Course.objects.filter(is_published=True)
+    if not settings_obj.courses_visible:
+        queryset = queryset.none()
+    queryset = queryset.order_by('title')
     courses_list = [_course_to_dict(course) for course in queryset]
 
     purchased_courses = []
@@ -216,6 +249,7 @@ def courses(request):
             'active_page': 'courses',
             'courses': courses_list,
             'purchased_courses': purchased_courses,
+            'courses_visible': settings_obj.courses_visible,
         },
     )
 
@@ -561,6 +595,28 @@ def admin_panel(request):
         'course_levels': Course.Level.choices,
     }
     return render(request, 'admin_panel.html', context)
+
+
+@admin_required
+def admin_settings(request):
+    settings_obj = _get_platform_settings()
+
+    if request.method == 'POST':
+        platform_name = request.POST.get('platform_name', '').strip()
+        settings_obj.platform_name = platform_name or 'LearnSphere'
+        settings_obj.courses_visible = request.POST.get('courses_visible') == 'on'
+        settings_obj.save(update_fields=['platform_name', 'courses_visible', 'updated_at'])
+        messages.success(request, 'System settings updated successfully.')
+        return redirect('admin_settings')
+
+    return render(
+        request,
+        'admin_settings.html',
+        {
+            'active_page': 'admin_panel',
+            'settings_obj': settings_obj,
+        },
+    )
 
 
 @admin_required
