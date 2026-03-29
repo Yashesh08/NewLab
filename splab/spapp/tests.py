@@ -171,3 +171,65 @@ class CoursesFilteringTests(TestCase):
             course_titles,
             ['Advanced Data Pipelines', 'Product Design Basics', 'Python for Beginners'],
         )
+
+
+class InstructorPanelFilteringTests(TestCase):
+    def setUp(self):
+        self.password = 'testpass123'
+        self.instructor_user = User.objects.create_user(
+            username='mentor@example.com',
+            email='mentor@example.com',
+            password=self.password,
+            first_name='Mentor',
+            last_name='One',
+        )
+        instructors_group, _ = Group.objects.get_or_create(name='Instructor')
+        self.instructor_user.groups.add(instructors_group)
+        self.instructor_profile = Instructor.objects.create(
+            name='Mentor One',
+            title='Senior Mentor',
+            bio='Guides learners.',
+            is_active=True,
+        )
+        self.python_course = Course.objects.create(
+            title='Python Mentor Track',
+            slug='python-mentor-track',
+            category='Development',
+            short_description='Python guided track.',
+            description='Detailed python guidance.',
+            level=Course.Level.BEGINNER,
+            duration_weeks=6,
+            price=49.00,
+            approval_status=Course.ApprovalStatus.APPROVED,
+            created_by=self.instructor_user,
+        )
+        self.data_course = Course.objects.create(
+            title='Data Ops Workshop',
+            slug='data-ops-workshop',
+            category='Data',
+            short_description='Data operations.',
+            description='All about pipelines.',
+            level=Course.Level.INTERMEDIATE,
+            duration_weeks=8,
+            price=79.00,
+            approval_status=Course.ApprovalStatus.PENDING,
+        )
+        self.data_course.instructors.add(self.instructor_profile)
+
+    def test_instructor_panel_filters_courses_by_search_query(self):
+        self.client.login(username=self.instructor_user.username, password=self.password)
+        response = self.client.get(reverse('instructor_panel'), {'q': 'python'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Python Mentor Track')
+        self.assertNotContains(response, 'Data Ops Workshop')
+        self.assertEqual(response.context['search_query'], 'python')
+
+    def test_instructor_panel_filters_courses_by_status(self):
+        self.client.login(username=self.instructor_user.username, password=self.password)
+        response = self.client.get(reverse('instructor_panel'), {'status': Course.ApprovalStatus.PENDING})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Data Ops Workshop')
+        self.assertNotContains(response, 'Python Mentor Track')
+        self.assertEqual(response.context['selected_status'], Course.ApprovalStatus.PENDING)

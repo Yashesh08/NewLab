@@ -973,6 +973,19 @@ def instructor_panel(request):
             return redirect('instructor_panel')
 
     courses_taught = _get_instructor_courses(request.user)
+    search_query = (request.GET.get('q') or '').strip()
+    approval_status = (request.GET.get('status') or '').strip()
+
+    if search_query:
+        courses_taught = courses_taught.filter(
+            Q(title__icontains=search_query) | Q(category__icontains=search_query)
+        )
+
+    valid_statuses = {choice[0] for choice in Course.ApprovalStatus.choices}
+    if approval_status in valid_statuses:
+        courses_taught = courses_taught.filter(approval_status=approval_status)
+    else:
+        approval_status = ''
 
     course_rows = [
         {
@@ -994,6 +1007,9 @@ def instructor_panel(request):
         'total_courses': len(course_rows),
         'total_enrollments': sum(item['enrollment_count'] for item in course_rows),
         'course_levels': Course.Level.choices,
+        'approval_statuses': Course.ApprovalStatus.choices,
+        'selected_status': approval_status,
+        'search_query': search_query,
     }
     return render(request, 'instructor_panel.html', context)
 
