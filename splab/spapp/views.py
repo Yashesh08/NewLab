@@ -541,6 +541,11 @@ def admin_panel(request):
     recent_users = User.objects.order_by('-date_joined')[:5]
     all_users = User.objects.order_by('-date_joined')
     recent_courses = Course.objects.order_by('-created_at')[:5]
+    enrollment_rows = (
+        Enrollment.objects
+        .select_related('user', 'course')
+        .order_by('-created_at')
+    )
 
     context = {
         'active_page': 'admin_panel',
@@ -551,6 +556,7 @@ def admin_panel(request):
         'recent_users': recent_users,
         'all_users': all_users,
         'recent_courses': recent_courses,
+        'enrollment_rows': enrollment_rows,
         'instructors': Instructor.objects.filter(is_active=True).order_by('name'),
         'course_levels': Course.Level.choices,
     }
