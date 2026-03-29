@@ -494,6 +494,80 @@
     </form>
 </section>
 
+<!-- Notification Section -->
+<section class="admin-form-section">
+    <div class="section-header">
+        <span class="section-header-icon">📣</span>
+        <h2>Send Notifications</h2>
+    </div>
+
+    <form method="post" class="form-grid">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="send_notification">
+
+        <div class="form-field">
+            <label for="recipient_group">Recipient Group *</label>
+            <select id="recipient_group" name="recipient_group" required>
+                <option value="">Select recipient group</option>
+                {% for value, label in notification_recipient_groups %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-field" style="grid-column: 1 / -1;">
+            <label for="notification_message">Message *</label>
+            <textarea id="notification_message" name="notification_message" placeholder="Write your notification for students or instructors..." required></textarea>
+        </div>
+
+        <button class="submit-btn" type="submit">Send Notification</button>
+    </form>
+</section>
+
+<!-- Recent Notifications Section -->
+<section class="admin-form-section" style="padding: 28px;">
+    <div class="section-header">
+        <span class="section-header-icon">🕒</span>
+        <h2>Recent Notifications</h2>
+    </div>
+    <p class="section-subtitle" style="color: #6b7280; margin-bottom: 20px;">
+        Message, date, and recipient details for recent admin notifications.
+    </p>
+
+    <div class="users-table-wrapper">
+        {% if recent_notifications %}
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Message</th>
+                    <th>Recipient</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for notification in recent_notifications %}
+                <tr>
+                    <td>
+                        <span class="user-email">{{ notification.message }}</span>
+                    </td>
+                    <td>
+                        <span class="user-role instructor">{{ notification.get_recipient_group_display }}</span>
+                    </td>
+                    <td>
+                        <span class="user-joined">{{ notification.created_at|date:'M d, Y h:i A' }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No notifications sent yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
 <!-- Overview Cards -->
 <div class="stats-grid" style="margin-bottom: 32px;">
     <div class="list-card">

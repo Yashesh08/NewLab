@@ -12,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
 from .models import (
+    AdminNotification,
     Assignment,
     AssignmentSubmission,
     Course,
@@ -567,6 +568,59 @@ def admin_panel(request):
             messages.success(request, f'Course "{course.title}" created and instructor mapping saved.')
             return redirect('admin_panel')
 
+        if action == 'send_notification':
+            recipient_group = request.POST.get('recipient_group', '').strip()
+            message_text = request.POST.get('notification_message', '').strip()
+
+            if recipient_group not in AdminNotification.RecipientGroup.values:
+                messages.error(request, 'Please choose a valid recipient group.')
+                return redirect('admin_panel')
+
+            if not message_text:
+                messages.error(request, 'Notification message is required.')
+                return redirect('admin_panel')
+
+            if recipient_group == AdminNotification.RecipientGroup.INSTRUCTORS:
+                recipients = (
+                    User.objects
+                    .filter(groups__name='Instructor', is_active=True)
+                    .exclude(email='')
+                    .distinct()
+                )
+            else:
+                recipients = (
+                    User.objects
+                    .filter(is_active=True, is_staff=False, is_superuser=False)
+                    .exclude(groups__name='Instructor')
+                    .exclude(email='')
+                    .distinct()
+                )
+
+            sent_count = 0
+            for user in recipients:
+                email_sent = _send_notification_email(
+                    to_email=user.email,
+                    subject='LearnSphere Admin Notification',
+                    message=message_text,
+                )
+                if email_sent:
+                    sent_count += 1
+
+            notification = AdminNotification.objects.create(
+                recipient_group=recipient_group,
+                message=message_text,
+                sent_count=sent_count,
+                created_by=request.user,
+            )
+            messages.success(
+                request,
+                (
+                    f'Notification sent to {notification.get_recipient_group_display().lower()}. '
+                    f'{sent_count} email(s) delivered.'
+                ),
+            )
+            return redirect('admin_panel')
+
     total_users = User.objects.count()
     total_courses = Course.objects.count()
     total_enrollments = Enrollment.objects.count()
@@ -580,6 +634,7 @@ def admin_panel(request):
         .select_related('user', 'course')
         .order_by('-created_at')
     )
+    recent_notifications = AdminNotification.objects.select_related('created_by')[:8]
 
     context = {
         'active_page': 'admin_panel',
@@ -593,6 +648,8 @@ def admin_panel(request):
         'enrollment_rows': enrollment_rows,
         'instructors': Instructor.objects.filter(is_active=True).order_by('name'),
         'course_levels': Course.Level.choices,
+        'notification_recipient_groups': AdminNotification.RecipientGroup.choices,
+        'recent_notifications': recent_notifications,
     }
     return render(request, 'admin_panel.html', context)
 

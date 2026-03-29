@@ -165,3 +165,26 @@ class PlatformSettings(TimeStampedModel):
 
     def __str__(self):
         return 'Platform Settings'
+
+
+class AdminNotification(TimeStampedModel):
+    class RecipientGroup(models.TextChoices):
+        STUDENTS = 'students', 'Students'
+        INSTRUCTORS = 'instructors', 'Instructors'
+
+    recipient_group = models.CharField(max_length=20, choices=RecipientGroup.choices)
+    message = models.TextField()
+    sent_count = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admin_notifications',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.get_recipient_group_display()} notification'
