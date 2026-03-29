@@ -5,7 +5,7 @@
 {% block content %}
 <section class="card" style="margin-bottom:16px;">
     <h1 class="section-title">Instructor Panel</h1>
-    <p class="section-subtitle">Manage assigned courses, add materials, and publish tests for students.</p>
+    <p class="section-subtitle">Manage assigned courses, submit new courses for approval, and publish tests for students.</p>
 
     <div class="grid grid-2">
         <article style="border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
@@ -19,6 +19,49 @@
     </div>
 </section>
 
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title" style="font-size:1.3rem;">Submit Course for Approval</h2>
+    <form method="post" class="grid grid-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_course_request">
+        <div>
+            <label for="title">Course Title *</label>
+            <input id="title" name="title" type="text" required>
+        </div>
+        <div>
+            <label for="category">Category *</label>
+            <input id="category" name="category" type="text" required>
+        </div>
+        <div>
+            <label for="level">Difficulty *</label>
+            <select id="level" name="level">
+                {% for value, label in course_levels %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="duration_weeks">Duration (weeks) *</label>
+            <input id="duration_weeks" name="duration_weeks" type="number" min="1" value="4" required>
+        </div>
+        <div>
+            <label for="price">Price ($) *</label>
+            <input id="price" name="price" type="number" min="0" step="0.01" value="0" required>
+        </div>
+        <div style="grid-column:1 / -1;">
+            <label for="short_description">Short Description *</label>
+            <textarea id="short_description" name="short_description" required></textarea>
+        </div>
+        <div style="grid-column:1 / -1;">
+            <label for="description">Full Description</label>
+            <textarea id="description" name="description"></textarea>
+        </div>
+        <div style="grid-column:1 / -1;">
+            <button type="submit">Submit for Approval</button>
+        </div>
+    </form>
+</section>
+
 <section class="card">
     <h2 class="section-title" style="font-size:1.3rem;">Courses Overview</h2>
     <table>
@@ -27,6 +70,7 @@
                 <th>Course</th>
                 <th>Category</th>
                 <th>Level</th>
+                <th>Status</th>
                 <th>Enrollments</th>
                 <th>Materials</th>
                 <th>Tests</th>
@@ -39,6 +83,7 @@
                 <td>{{ row.title }}</td>
                 <td>{{ row.category }}</td>
                 <td>{{ row.level }}</td>
+                <td>{{ row.approval_status }}</td>
                 <td>{{ row.enrollment_count }}</td>
                 <td>{{ row.materials_count }}</td>
                 <td>{{ row.tests_count }}</td>
@@ -46,7 +91,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7">No courses mapped to your instructor profile yet.</td>
+                <td colspan="8">No courses mapped to your instructor profile yet.</td>
             </tr>
             {% endfor %}
         </tbody>

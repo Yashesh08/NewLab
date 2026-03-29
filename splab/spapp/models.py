@@ -29,6 +29,11 @@ class Course(TimeStampedModel):
         INTERMEDIATE = 'intermediate', 'Intermediate'
         ADVANCED = 'advanced', 'Advanced'
 
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
     title = models.CharField(max_length=180)
     slug = models.SlugField(max_length=220, unique=True)
     category = models.CharField(max_length=80)
@@ -38,6 +43,18 @@ class Course(TimeStampedModel):
     duration_weeks = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     is_published = models.BooleanField(default=True)
+    approval_status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.APPROVED,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_courses',
+    )
     instructors = models.ManyToManyField(Instructor, blank=True, related_name='courses')
 
     class Meta:
