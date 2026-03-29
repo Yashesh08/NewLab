@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile | {{ platform_name|default:"LearnSphere" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="card profile-card">
+    <div class="profile-header">
+        <div>
+            <h1 class="section-title">My Profile</h1>
+            <p class="section-subtitle">View your personal details and account information.</p>
+        </div>
+        <a href="{% url 'edit_profile' %}" class="button">Edit Profile</a>
+    </div>
+
+    <div class="profile-grid">
+        <div class="profile-field">
+            <p class="field-label">First Name</p>
+            <p class="field-value">{{ user_obj.first_name|default:'-' }}</p>
+        </div>
+        <div class="profile-field">
+            <p class="field-label">Last Name</p>
+            <p class="field-value">{{ user_obj.last_name|default:'-' }}</p>
+        </div>
+        <div class="profile-field">
+            <p class="field-label">Email</p>
+            <p class="field-value">{{ user_obj.email|default:'-' }}</p>
+        </div>
+        <div class="profile-field">
+            <p class="field-label">Role</p>
+            <p class="field-value">
+                {% if user_role == 'admin' %}
+                    Admin
+                {% elif user_role == 'instructor' %}
+                    Instructor
+                {% else %}
+                    Student
+                {% endif %}
+            </p>
+        </div>
+
+        {% if user_role == 'instructor' %}
+            <div class="profile-field">
+                <p class="field-label">Instructor Title</p>
+                <p class="field-value">{{ instructor_profile.title|default:'Instructor' }}</p>
+            </div>
+            <div class="profile-field profile-field-full">
+                <p class="field-label">Instructor Bio</p>
+                <p class="field-value">{{ instructor_profile.bio|default:'No bio added yet.' }}</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
